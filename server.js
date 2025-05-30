@@ -661,6 +661,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+//
+app.get('/api/debug/jwt', (req, res) => {
+  res.json({
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    jwtSecretLength: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
+    nodeEnv: process.env.NODE_ENV,
+    jwtSecretStart: process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 10) + '...' : 'undefined'
+  });
+});
+
 // ===== SOCKET.IO REAL-TIME FEATURES =====
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
