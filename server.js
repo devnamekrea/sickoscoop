@@ -124,7 +124,7 @@ const Report = mongoose.model('Report', reportSchema);
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
+  
   if (!token) {
     return res.status(401).json({ message: 'Access token required' });
   }
@@ -132,10 +132,14 @@ const authenticateToken = async (req, res, next) => {
   try {
     console.log('🔍 Token received:', token.substring(0, 20) + '...');
     console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('🔍 JWT_SECRET first 10 chars:', process.env.JWT_SECRET?.substring(0, 10));
     
+    // ✅ CRITICAL: Specify algorithm in verification
     const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-  algorithms: ['HS256']  // ← Add this
-});
+      algorithms: ['HS256']  // ← This is crucial!
+    });
+    
+    console.log('✅ Token verified successfully:', decoded);
     
     const user = await User.findById(decoded.userId).select('-password');
     console.log('🔍 User found:', !!user);
@@ -146,8 +150,9 @@ const authenticateToken = async (req, res, next) => {
     
     req.user = user;
     next();
+    
   } catch (error) {
-    console.error('🚨 JWT VERIFICATION ERROR:', error.name, error.message);
+    console.error('❌ JWT VERIFICATION ERROR:', error.name, error.message);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
