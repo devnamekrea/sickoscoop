@@ -133,8 +133,9 @@ const authenticateToken = async (req, res, next) => {
     console.log('🔍 Token received:', token.substring(0, 20) + '...');
     console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('🔍 Token verified successfully:', decoded);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+  algorithms: ['HS256']  // ← Add this
+});
     
     const user = await User.findById(decoded.userId).select('-password');
     console.log('🔍 User found:', !!user);
@@ -188,10 +189,13 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: '7d' }
-    );
+  { userId: user._id },
+  process.env.JWT_SECRET,
+  { 
+    algorithm: 'HS256',    // ← Add this line
+    expiresIn: '7d' 
+  }
+);
 
     res.status(201).json({
       message: 'User created successfully',
@@ -239,10 +243,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: '7d' }
-    );
+  { userId: user._id },
+  process.env.JWT_SECRET,
+  { 
+    algorithm: 'HS256',    // ← Add this line
+    expiresIn: '7d' 
+  }
+);
 
     res.json({
       message: 'Login successful',
