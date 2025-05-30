@@ -130,17 +130,23 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
+    console.log('🔍 Token received:', token.substring(0, 20) + '...');
+    console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('🔍 Decoded token:', decoded);
-    console.log('🔍 Looking for userId:', decoded.userId);
+    console.log('🔍 Token verified successfully:', decoded);
+    
     const user = await User.findById(decoded.userId).select('-password');
-    console.log('🔍 Found user:', !!user, user ? user._id : 'null');
+    console.log('🔍 User found:', !!user);
+    
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
+    
     req.user = user;
     next();
   } catch (error) {
+    console.error('🚨 JWT VERIFICATION ERROR:', error.name, error.message);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
