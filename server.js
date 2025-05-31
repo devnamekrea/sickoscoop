@@ -12,16 +12,44 @@ require('dotenv').config();
 
 const app = express();
 const server = createServer(app);
+
+// Socket.IO Configuration with CORS
+const allowedOrigins = [
+  'https://68396333bc5b92e8e2b1d6a9--sickoscoop.netlify.app',
+  'https://sickoscoop.netlify.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "https://68396333bc5b92e8e2b1d6a9--sickoscoop.netlify.app",
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
 // ===== MIDDLEWARE =====
 app.use(helmet());
-app.use(cors());
+
+// CORS Configuration - FIXED for localhost development
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting
@@ -194,13 +222,13 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-  { userId: user._id },
-  process.env.JWT_SECRET,
-  { 
-    algorithm: 'HS256',    // ← Add this line
-    expiresIn: '7d' 
-  }
-);
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { 
+        algorithm: 'HS256',    // ← Add this line
+        expiresIn: '7d' 
+      }
+    );
 
     res.status(201).json({
       message: 'User created successfully',
@@ -248,13 +276,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-  { userId: user._id },
-  process.env.JWT_SECRET,
-  { 
-    algorithm: 'HS256',    // ← Add this line
-    expiresIn: '7d' 
-  }
-);
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { 
+        algorithm: 'HS256',    // ← Add this line
+        expiresIn: '7d' 
+      }
+    );
 
     res.json({
       message: 'Login successful',
@@ -507,7 +535,7 @@ app.post('/api/posts/:postId/like', authenticateToken, async (req, res) => {
 
     res.json({ 
       message: isLiked ? 'Post unliked' : 'Post liked',
-      isLiked: !isLiked,
+      liked: !isLiked,
       likesCount: post.likes.length 
     });
   } catch (error) {
@@ -553,19 +581,66 @@ app.post('/api/posts/:postId/comments', authenticateToken, async (req, res) => {
 
 // ===== CHAT/MESSAGE ROUTES =====
 
-// Get messages
+// Get chat conversations
+app.get('/api/chats', authenticateToken, async (req, res) => {
+  try {
+    // Find all messages where user is sender or recipient
+    const messages = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { sender: req.user._id },
+            { recipient: req.user._id }
+          ]
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ['$sender', req.user._id] },
+              '$recipient',
+              '$sender'
+            ]
+          },
+          lastMessage: { $first: '$$ROOT' },
+          participants: { $first: ['$sender', '$recipient'] }
+        }
+      }
+    ]);
+
+    // Populate user data for chat participants
+    const chats = await Message.populate(messages, [
+      { path: 'lastMessage.sender', select: 'name avatar verified' },
+      { path: 'lastMessage.recipient', select: 'name avatar verified' },
+      { path: '_id', select: 'name avatar verified' }
+    ]);
+
+    res.json(chats);
+  } catch (error) {
+    console.error('Get chats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get messages for a specific chat
 app.get('/api/messages', authenticateToken, async (req, res) => {
   try {
-    const { chatRoom = 'public', limit = 50 } = req.query;
+    const { chatRoom = 'public', with: otherUserId, limit = 50 } = req.query;
     
-    let query = { chatRoom };
+    let query = {};
     
-    // For private messages, include messages where user is sender or recipient
-    if (chatRoom !== 'public') {
+    if (chatRoom === 'public') {
+      query = { chatRoom: 'public' };
+    } else if (otherUserId) {
+      // Private messages between two users
       query = {
         $or: [
-          { sender: req.user._id, recipient: chatRoom },
-          { sender: chatRoom, recipient: req.user._id }
+          { sender: req.user._id, recipient: otherUserId },
+          { sender: otherUserId, recipient: req.user._id }
         ]
       };
     }
@@ -682,7 +757,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-//
+// Debug endpoint
 app.get('/api/debug/jwt', (req, res) => {
   res.json({
     hasJwtSecret: !!process.env.JWT_SECRET,
@@ -718,6 +793,7 @@ mongoose.connect(process.env.MONGODB_URI)
     const PORT = process.env.PORT || 3001;
     server.listen(PORT, () => {
       console.log(`SickoScoop API server running on port ${PORT}`);
+      console.log('🌐 CORS allowed origins:', allowedOrigins);
     });
   })
   .catch((error) => {
