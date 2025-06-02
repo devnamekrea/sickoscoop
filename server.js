@@ -14,6 +14,7 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+app.set('trust proxy', true);
 const server = createServer(app);
 
 // Socket.IO Configuration with CORS
@@ -69,7 +70,6 @@ const limiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true // This fixes the X-Forwarded-For warning
 });
 app.use('/api/', limiter);
 
@@ -262,7 +262,6 @@ const authenticateToken = async (req, res, next) => {
   try {
     console.log('🔍 Token received:', token.substring(0, 20) + '...');
     console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    console.log('🔍 JWT_SECRET first 10 chars:', process.env.JWT_SECRET?.substring(0, 10));
     
     // ✅ CRITICAL: Specify algorithm in verification
     const decoded = jwt.verify(token, process.env.JWT_SECRET, {
@@ -271,8 +270,36 @@ const authenticateToken = async (req, res, next) => {
     
     console.log('✅ Token verified successfully:', decoded);
     
+    // ✅ DEMO USER FIX: Handle demo users specially
+    if (decoded.userId === 'demo-user-id') {
+      console.log('🎭 Demo user detected - creating mock user object');
+      
+      // Create a mock user object for demo mode
+      const demoUser = {
+        _id: 'demo-user-id',
+        username: 'Demo User',
+        email: 'demo@sickoscoop.com',
+        avatar: '✨',
+        bio: 'Demo user for SickoScoop',
+        verified: true,
+        privacyScore: 94,
+        transparencyScore: 98,
+        communityScore: 96,
+        blockedUsers: [],
+        followers: [],
+        following: [],
+        isPrivate: false,
+        createdAt: new Date()
+      };
+      
+      req.user = demoUser;
+      console.log('✅ Demo user set up successfully');
+      return next();
+    }
+    
+    // For real users, find in database
     const user = await User.findById(decoded.userId).select('-password');
-    console.log('🔍 User found:', !!user);
+    console.log('🔍 Real user found:', !!user);
     
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
