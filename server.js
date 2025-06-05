@@ -14,7 +14,7 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 const server = createServer(app);
 
 // Socket.IO Configuration with CORS
@@ -64,12 +64,17 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting - FIXED
+// Rate limiting - PRODUCTION SAFE
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  trustProxy: false, // Disable trust proxy for rate limiting
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/health' || req.path === '/';
+  }
 });
 app.use('/api/', limiter);
 
@@ -109,12 +114,12 @@ app.get('/', (req, res) => {
     message: 'SickoScoop API is running successfully! 🚀',
     version: '1.0.0',
     status: 'active',
-    endpoints: {
-      auth: ['POST /api/auth/login', 'POST /api/auth/register'],
-      posts: ['GET /api/posts', 'POST /api/posts'],
-      chat: ['GET /api/conversations'],
-      other: ['GET /api/health']
-    },
+   endpoints: {
+  auth: ['POST /api/auth/login', 'POST /api/auth/register'],
+  posts: ['GET /api/posts', 'POST /api/posts', 'GET /api/posts/public'],  // ← Added!
+  chat: ['GET /api/conversations'],
+  other: ['GET /api/health']
+}
     timestamp: new Date().toISOString()
   });
 });
@@ -494,6 +499,69 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Verify token endpoint - ADD THIS
+app.post('/api/auth/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ valid: false, message: 'Token required' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+        algorithms: ['HS256']
+      });
+      
+      // Handle demo user
+      if (decoded.userId === 'demo-user-id') {
+        return res.json({
+          valid: true,
+          user: {
+            id: 'demo-user-id',
+            username: 'Demo User',
+            email: 'demo@sickoscoop.com',
+            verified: true,
+            privacyScore: 94,
+            transparencyScore: 98,
+            communityScore: 96
+          }
+        });
+      }
+      
+      // Find real user
+      const user = await User.findById(decoded.userId).select('-password');
+      if (!user) {
+        return res.status(401).json({ valid: false, message: 'User not found' });
+      }
+      
+      res.json({
+        valid: true,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar,
+          bio: user.bio,
+          verified: user.verified,
+          privacyScore: user.privacyScore,
+          transparencyScore: user.transparencyScore,
+          communityScore: user.communityScore,
+          followers: user.followers,
+          following: user.following
+        }
+      });
+      
+    } catch (jwtError) {
+      return res.status(401).json({ valid: false, message: 'Invalid token' });
+    }
+    
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(500).json({ valid: false, message: 'Server error' });
+  }
+});
+
 // ===== MEDIA UPLOAD ROUTE - NEW =====
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
   try {
@@ -504,22 +572,10 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    // Check if AWS is configured
+    // Check if AWS is configured for production
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
-      console.log('⚠️ AWS not configured, saving locally instead');
-      // For now, return mock URLs for development
-      const mockFiles = req.files.map((file, index) => ({
-        type: file.mimetype.startsWith('image/') ? 'image' :
-              file.mimetype.startsWith('video/') ? 'video' :
-              file.mimetype.startsWith('audio/') ? 'audio' : 'pdf',
-        url: `http://localhost:${process.env.PORT || 3001}/uploads/mock-${Date.now()}-${index}`,
-        filename: file.originalname,
-        size: file.size
-      }));
-      
-      return res.json({
-        message: 'Files uploaded successfully (mock)',
-        files: mockFiles
+      return res.status(500).json({ 
+        message: 'File upload not configured. Please set up AWS S3 credentials.' 
       });
     }
 
@@ -565,6 +621,70 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
   }
 });
 
+// ADD THE PUBLIC POSTS ENDPOINT HERE ↓↓↓
+
+// Get public posts (no authentication required) - NEW ENDPOINT
+// Get public posts (no authentication required) - ENHANCED ENDPOINT
+app.get('/api/posts/public', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    console.log('🌐 Public posts request:', { page, limit, skip });
+
+    // Get public posts with proper population
+    const posts = await Post.find({
+      $or: [
+        { visibility: 'public' },
+        { isPublic: true },
+        { visibility: { $exists: false } } // Posts without visibility field default to public
+      ]
+    })
+    .populate('userId', 'username avatar verified transparencyScore')
+    .populate('likes.user', 'username')
+    .populate('comments.user', 'username avatar verified')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean(); // Use lean() for better performance
+
+    console.log('✅ Found posts:', posts.length);
+
+    // Log first post for debugging
+    if (posts.length > 0) {
+      console.log('📄 Sample post:', {
+        id: posts[0]._id,
+        content: posts[0].content?.substring(0, 50),
+        author: posts[0].userId?.username,
+        hasUserId: !!posts[0].userId
+      });
+    }
+
+    // Transform for frontend compatibility
+    const transformedPosts = posts.map(post => ({
+      ...post,
+      // Ensure likes are just user IDs for frontend compatibility
+      likes: (post.likes || []).map(like => 
+        typeof like === 'object' && like.user ? like.user._id || like.user : like
+      ),
+      // Ensure we have the right structure
+      userId: post.userId || { username: 'Unknown User', avatar: '?', verified: false }
+    }));
+
+    res.json(transformedPosts);
+  } catch (error) {
+    console.error('❌ Public posts error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch public posts',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// ===== POST ROUTES - UPDATED =====
+// (your existing posts routes go here)
 // ===== POST ROUTES - UPDATED =====
 
 // Get posts (feed) - UPDATED for frontend compatibility
@@ -1033,6 +1153,129 @@ app.get('/api/debug/jwt', (req, res) => {
   });
 });
 
+// Add ONLY this debug endpoint after line 1084 - NO sample data creation
+
+// ===== DEBUG ENDPOINT (REAL DATA ONLY) =====
+
+// 🔍 DEBUG ENDPOINT - Check what's actually in your database
+app.get('/api/debug/posts', async (req, res) => {
+  try {
+    console.log('🔍 Starting posts debug...');
+    
+    // Get all posts without population
+    const rawPosts = await Post.find().limit(10);
+    console.log('📊 Raw posts count:', rawPosts.length);
+    
+    // Get all users
+    const users = await User.find().select('username email');
+    console.log('👥 Users count:', users.length);
+    
+    // Check for orphaned posts
+    const orphanedPosts = await Post.find({
+      userId: { $nin: users.map(u => u._id) }
+    });
+    console.log('🚨 Orphaned posts:', orphanedPosts.length);
+    
+    // Try population
+    const populatedPosts = await Post.find()
+      .populate('userId', 'username avatar verified')
+      .limit(5);
+    
+    console.log('🔗 Sample populated posts:');
+    populatedPosts.forEach((post, idx) => {
+      console.log(`Post ${idx + 1}:`, {
+        _id: post._id,
+        content: post.content?.substring(0, 50) + '...',
+        userId: post.userId,
+        hasUsername: !!post.userId?.username
+      });
+    });
+    
+    res.json({
+      status: 'Debug complete',
+      summary: {
+        totalPosts: rawPosts.length,
+        totalUsers: users.length,
+        orphanedPosts: orphanedPosts.length,
+        hasValidData: users.length > 0 && rawPosts.length > 0 && orphanedPosts.length === 0
+      },
+      diagnosis: {
+        databaseEmpty: users.length === 0 && rawPosts.length === 0,
+        hasUsers: users.length > 0,
+        hasPosts: rawPosts.length > 0,
+        hasOrphanedPosts: orphanedPosts.length > 0,
+        validPopulatedPosts: populatedPosts.filter(p => p.userId?.username).length
+      },
+      recommendations: (() => {
+        if (users.length === 0) return ['Database is empty. Register users on frontend.'];
+        if (orphanedPosts.length > 0) return ['Found orphaned posts. Run cleanup endpoint.'];
+        if (rawPosts.length === 0) return ['No posts found. Create posts via frontend.'];
+        return ['Database looks healthy!'];
+      })(),
+      sampleData: {
+        users: users.slice(0, 3).map(u => ({ username: u.username, email: u.email })),
+        posts: populatedPosts.slice(0, 3).map(post => ({
+          _id: post._id,
+          content: post.content?.substring(0, 100),
+          authorUsername: post.userId?.username || 'NO USERNAME',
+          authorId: post.userId?._id || 'NO USER ID'
+        }))
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// 🛠️ CLEANUP ENDPOINT - Only if needed to remove bad data
+app.post('/api/debug/cleanup', async (req, res) => {
+  try {
+    console.log('🛠️ Starting database cleanup...');
+    
+    // Find and count orphaned posts
+    const users = await User.find();
+    const userIds = users.map(u => u._id);
+    
+    const orphanedPosts = await Post.find({
+      userId: { $nin: userIds }
+    });
+    
+    if (orphanedPosts.length === 0) {
+      return res.json({
+        message: 'No cleanup needed - database is clean!',
+        deletedPosts: 0
+      });
+    }
+    
+    // Delete orphaned posts only
+    const deleteResult = await Post.deleteMany({
+      userId: { $nin: userIds }
+    });
+    
+    console.log('🗑️ Cleaned up orphaned posts:', deleteResult.deletedCount);
+    
+    res.json({
+      message: 'Cleanup completed - removed orphaned posts only',
+      deletedPosts: deleteResult.deletedCount,
+      remainingPosts: await Post.countDocuments(),
+      remainingUsers: users.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Cleanup error:', error);
+    res.status(500).json({ 
+      error: error.message 
+    });
+  }
+});
+
+// ===== END DEBUG ENDPOINTS =====
+
 // ===== SOCKET.IO REAL-TIME FEATURES =====
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -1052,7 +1295,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ===== ERROR HANDLING =====
+// ===== ERROR HANDLING & 404 - MUST BE LAST =====
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -1064,9 +1307,14 @@ app.use((error, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Handle 404
+// Handle 404 - THIS MUST BE THE VERY LAST ROUTE
 app.use('*', (req, res) => {
-  res.status(404).json({ message: 'API endpoint not found' });
+  console.log('❌ 404 for:', req.method, req.originalUrl);
+  res.status(404).json({ 
+    message: 'API endpoint not found',
+    requestedUrl: req.originalUrl,
+    method: req.method
+  });
 });
 
 // ===== DATABASE CONNECTION & SERVER START =====
