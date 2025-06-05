@@ -114,12 +114,12 @@ app.get('/', (req, res) => {
     message: 'SickoScoop API is running successfully! 🚀',
     version: '1.0.0',
     status: 'active',
-   endpoints: {
-  auth: ['POST /api/auth/login', 'POST /api/auth/register'],
-  posts: ['GET /api/posts', 'POST /api/posts', 'GET /api/posts/public'],  // ← Added!
-  chat: ['GET /api/conversations'],
-  other: ['GET /api/health']
-}
+    endpoints: {
+      auth: ['POST /api/auth/login', 'POST /api/auth/register'],
+      posts: ['GET /api/posts', 'POST /api/posts', 'GET /api/posts/public'],
+      chat: ['GET /api/conversations'],
+      other: ['GET /api/health']
+    },                        // ← ADD THIS COMMA!
     timestamp: new Date().toISOString()
   });
 });
