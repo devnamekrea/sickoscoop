@@ -1307,11 +1307,34 @@ app.use((error, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Handle 404 - THIS MUST BE THE VERY LAST ROUTE
+// ===== REACT ROUTER URL HANDLING - ADD BEFORE 404 =====
+// Handle React Router URLs (for sharing individual posts)
+app.get('*', (req, res) => {
+  // Only handle non-API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ 
+      message: 'API endpoint not found',
+      requestedUrl: req.originalUrl,
+      method: req.method
+    });
+  }
+  
+  // For React Router paths like /post/123, /profile, etc.
+  console.log('🔗 React Router path:', req.path);
+  res.json({
+    message: 'SickoScoop - React handles this route',
+    path: req.path,
+    note: 'This URL will be handled by React Router on the frontend',
+    validPaths: ['/post/:id', '/profile', '/chat', '/'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle other HTTP methods with 404
 app.use('*', (req, res) => {
   console.log('❌ 404 for:', req.method, req.originalUrl);
   res.status(404).json({ 
-    message: 'API endpoint not found',
+    message: 'Endpoint not found',
     requestedUrl: req.originalUrl,
     method: req.method
   });
