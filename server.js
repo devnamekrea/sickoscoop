@@ -1,4 +1,4 @@
-// server.js - Main server file
+// server.js - Main server file with DigitalOcean Spaces integration
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -78,11 +78,16 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ===== AWS S3 Configuration =====
+// ===== DIGITALOCEAN SPACES CONFIGURATION =====
+const spacesEndpoint = new AWS.Endpoint(process.env.DO_SPACES_ENDPOINT || 'nyc3.digitaloceanspaces.com');
 const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1'
+  endpoint: spacesEndpoint,
+  accessKeyId: process.env.DO_SPACES_KEY,
+  secretAccessKey: process.env.DO_SPACES_SECRET,
+  region: process.env.DO_SPACES_REGION || 'nyc3',
+  // Force path style for DigitalOcean Spaces compatibility
+  s3ForcePathStyle: false,
+  signatureVersion: 'v4'
 });
 
 // Multer configuration for file uploads
@@ -108,18 +113,20 @@ const upload = multer({
   }
 });
 
-// ===== ROOT ROUTE (ADD THIS) =====
+// ===== ROOT ROUTE =====
 app.get('/', (req, res) => {
   res.json({
     message: 'SickoScoop API is running successfully! 🚀',
     version: '1.0.0',
     status: 'active',
+    storage: 'DigitalOcean Spaces',
     endpoints: {
       auth: ['POST /api/auth/login', 'POST /api/auth/register'],
       posts: ['GET /api/posts', 'POST /api/posts', 'GET /api/posts/public'],
+      media: ['POST /api/media/upload'],
       chat: ['GET /api/conversations'],
       other: ['GET /api/health']
-    },                        // ← ADD THIS COMMA!
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -128,7 +135,7 @@ app.get('/', (req, res) => {
 
 // User Schema - UPDATED for frontend compatibility
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, trim: true, unique: true }, // CHANGED: name -> username
+  username: { type: String, required: true, trim: true, unique: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
   avatar: { type: String, default: '✨' },
@@ -143,18 +150,18 @@ const userSchema = new mongoose.Schema({
     reason: String,
     createdAt: { type: Date, default: Date.now }
   }],
-  privacyScore: { type: Number, default: 94, min: 0, max: 100 }, // ADDED
-  transparencyScore: { type: Number, default: 98, min: 0, max: 100 }, // UPDATED default
-  communityScore: { type: Number, default: 96, min: 0, max: 100 }, // ADDED
+  privacyScore: { type: Number, default: 94, min: 0, max: 100 },
+  transparencyScore: { type: Number, default: 98, min: 0, max: 100 },
+  communityScore: { type: Number, default: 96, min: 0, max: 100 },
   lastActive: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 
 // Post Schema - UPDATED for frontend compatibility
 const postSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // CHANGED: author -> userId
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   content: { type: String, required: true, maxlength: 2000 },
-  mediaFiles: [{ // CHANGED: images -> mediaFiles for compatibility
+  mediaFiles: [{
     type: {
       type: String,
       enum: ['image', 'video', 'audio', 'pdf'],
@@ -165,14 +172,15 @@ const postSchema = new mongoose.Schema({
       required: true
     },
     filename: String,
-    size: Number
+    size: Number,
+    spacesKey: String // Store the DigitalOcean Spaces key for deletion if needed
   }],
   likes: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ADDED user field for frontend
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     createdAt: { type: Date, default: Date.now }
   }],
   comments: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // CHANGED: author -> user
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     content: { type: String, maxlength: 500 },
     createdAt: { type: Date, default: Date.now }
   }],
@@ -183,11 +191,11 @@ const postSchema = new mongoose.Schema({
     sensitivityLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' }
   },
   visibility: { type: String, enum: ['public', 'followers', 'private'], default: 'public' },
-  isPublic: { type: Boolean, default: true }, // ADDED for frontend compatibility
+  isPublic: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
 
-// Conversation Schema - ADDED for frontend
+// Conversation Schema
 const conversationSchema = new mongoose.Schema({
   participants: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -206,15 +214,15 @@ const conversationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Message Schema - UPDATED
+// Message Schema
 const messageSchema = new mongoose.Schema({
-  conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' }, // ADDED
+  conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null for public chat
+  recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   content: { type: String, required: true, maxlength: 1000 },
   chatRoom: { type: String, default: 'public' },
-  messageType: { type: String, enum: ['text', 'image', 'video', 'audio', 'file'], default: 'text' }, // ADDED
-  mediaUrl: String, // ADDED
+  messageType: { type: String, enum: ['text', 'image', 'video', 'audio', 'file'], default: 'text' },
+  mediaUrl: String,
   isEdited: { type: Boolean, default: false },
   editHistory: [{
     content: String,
@@ -224,7 +232,7 @@ const messageSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     readAt: { type: Date, default: Date.now }
   }],
-  isDeleted: { type: Boolean, default: false }, // ADDED
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -238,7 +246,7 @@ const reportSchema = new mongoose.Schema({
     required: true 
   },
   description: { type: String, required: true, maxlength: 1000 },
-  evidence: [{ type: String }], // URLs or file paths
+  evidence: [{ type: String }],
   status: { 
     type: String, 
     enum: ['pending', 'investigating', 'resolved', 'dismissed'],
@@ -251,7 +259,7 @@ const reportSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 const Post = mongoose.model('Post', postSchema);
-const Conversation = mongoose.model('Conversation', conversationSchema); // ADDED
+const Conversation = mongoose.model('Conversation', conversationSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Report = mongoose.model('Report', reportSchema);
 
@@ -268,18 +276,15 @@ const authenticateToken = async (req, res, next) => {
     console.log('🔍 Token received:', token.substring(0, 20) + '...');
     console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
     
-    // ✅ CRITICAL: Specify algorithm in verification
     const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-      algorithms: ['HS256']  // ← This is crucial!
+      algorithms: ['HS256']
     });
     
     console.log('✅ Token verified successfully:', decoded);
     
-    // ✅ DEMO USER FIX: Handle demo users specially
     if (decoded.userId === 'demo-user-id') {
       console.log('🎭 Demo user detected - creating mock user object');
       
-      // Create a mock user object for demo mode
       const demoUser = {
         _id: 'demo-user-id',
         username: 'Demo User',
@@ -302,7 +307,6 @@ const authenticateToken = async (req, res, next) => {
       return next();
     }
     
-    // For real users, find in database
     const user = await User.findById(decoded.userId).select('-password');
     console.log('🔍 Real user found:', !!user);
     
@@ -321,12 +325,11 @@ const authenticateToken = async (req, res, next) => {
 
 // ===== AUTHENTICATION ROUTES =====
 
-// Register - UPDATED for frontend compatibility
+// Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body; // CHANGED: name -> username
+    const { username, email, password } = req.body;
 
-    // Validation
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -335,7 +338,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ 
       $or: [{ email }, { username }] 
     });
@@ -343,22 +345,19 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email or username' });
     }
 
-    // Hash password
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user
     const user = new User({
-      username, // CHANGED
+      username,
       email,
       password: hashedPassword
     });
 
     await user.save();
 
-    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, username: user.username }, // ADDED username to token
+      { userId: user._id, username: user.username },
       process.env.JWT_SECRET,
       { 
         algorithm: 'HS256',
@@ -371,14 +370,14 @@ app.post('/api/auth/register', async (req, res) => {
       token,
       user: {
         id: user._id,
-        username: user.username, // CHANGED
+        username: user.username,
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
         verified: user.verified,
-        privacyScore: user.privacyScore, // ADDED
+        privacyScore: user.privacyScore,
         transparencyScore: user.transparencyScore,
-        communityScore: user.communityScore // ADDED
+        communityScore: user.communityScore
       }
     });
   } catch (error) {
@@ -387,7 +386,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login - UPDATED for frontend compatibility
+// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -396,50 +395,46 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-// Add this at the start of your existing login route
-if (email === 'demo@sickoscoop.com' && password === 'demo') {
-  const demoUser = {
-    id: 'demo-user-id',
-    username: 'Demo User',
-    email: 'demo@sickoscoop.com',
-    verified: true,
-    privacyScore: 94,
-    transparencyScore: 98,
-    communityScore: 96
-  };
+    // Demo login
+    if (email === 'demo@sickoscoop.com' && password === 'demo') {
+      const demoUser = {
+        id: 'demo-user-id',
+        username: 'Demo User',
+        email: 'demo@sickoscoop.com',
+        verified: true,
+        privacyScore: 94,
+        transparencyScore: 98,
+        communityScore: 96
+      };
 
-  const token = jwt.sign(
-    { userId: 'demo-user-id', username: 'Demo User' },
-    process.env.JWT_SECRET || 'demo-secret-key',
-    { algorithm: 'HS256', expiresIn: '7d' }
-  );
+      const token = jwt.sign(
+        { userId: 'demo-user-id', username: 'Demo User' },
+        process.env.JWT_SECRET || 'demo-secret-key',
+        { algorithm: 'HS256', expiresIn: '7d' }
+      );
 
-  return res.json({
-    message: 'Demo login successful',
-    token,
-    user: demoUser
-  });
-}
+      return res.json({
+        message: 'Demo login successful',
+        token,
+        user: demoUser
+      });
+    }
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Update last active
     user.lastActive = new Date();
     await user.save();
 
-    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, username: user.username }, // ADDED username
+      { userId: user._id, username: user.username },
       process.env.JWT_SECRET,
       { 
         algorithm: 'HS256',
@@ -452,14 +447,14 @@ if (email === 'demo@sickoscoop.com' && password === 'demo') {
       token,
       user: {
         id: user._id,
-        username: user.username, // CHANGED
+        username: user.username,
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
         verified: user.verified,
-        privacyScore: user.privacyScore, // ADDED
+        privacyScore: user.privacyScore,
         transparencyScore: user.transparencyScore,
-        communityScore: user.communityScore, // ADDED
+        communityScore: user.communityScore,
         followers: user.followers,
         following: user.following
       }
@@ -470,24 +465,24 @@ if (email === 'demo@sickoscoop.com' && password === 'demo') {
   }
 });
 
-// Get current user - UPDATED
+// Get current user
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .populate('followers', 'username avatar verified') // CHANGED: name -> username
+      .populate('followers', 'username avatar verified')
       .populate('following', 'username avatar verified')
       .select('-password');
 
     res.json({
       id: user._id,
-      username: user.username, // CHANGED
+      username: user.username,
       email: user.email,
       avatar: user.avatar,
       bio: user.bio,
       verified: user.verified,
-      privacyScore: user.privacyScore, // ADDED
+      privacyScore: user.privacyScore,
       transparencyScore: user.transparencyScore,
-      communityScore: user.communityScore, // ADDED
+      communityScore: user.communityScore,
       followers: user.followers,
       following: user.following,
       isPrivate: user.isPrivate,
@@ -499,7 +494,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Verify token endpoint - ADD THIS
+// Verify token endpoint
 app.post('/api/auth/verify', async (req, res) => {
   try {
     const { token } = req.body;
@@ -513,7 +508,6 @@ app.post('/api/auth/verify', async (req, res) => {
         algorithms: ['HS256']
       });
       
-      // Handle demo user
       if (decoded.userId === 'demo-user-id') {
         return res.json({
           valid: true,
@@ -529,7 +523,6 @@ app.post('/api/auth/verify', async (req, res) => {
         });
       }
       
-      // Find real user
       const user = await User.findById(decoded.userId).select('-password');
       if (!user) {
         return res.status(401).json({ valid: false, message: 'User not found' });
@@ -562,7 +555,7 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
-// ===== MEDIA UPLOAD ROUTE - NEW =====
+// ===== DIGITALOCEAN SPACES MEDIA UPLOAD ROUTE =====
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
   try {
     console.log('📁 File upload request received');
@@ -572,10 +565,15 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    // Check if AWS is configured for production
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
+    // Check if DigitalOcean Spaces is configured
+    if (!process.env.DO_SPACES_KEY || !process.env.DO_SPACES_SECRET || !process.env.DO_SPACES_BUCKET) {
+      console.error('❌ DigitalOcean Spaces not configured. Missing environment variables:');
+      console.error('DO_SPACES_KEY:', !!process.env.DO_SPACES_KEY);
+      console.error('DO_SPACES_SECRET:', !!process.env.DO_SPACES_SECRET);
+      console.error('DO_SPACES_BUCKET:', !!process.env.DO_SPACES_BUCKET);
       return res.status(500).json({ 
-        message: 'File upload not configured. Please set up AWS S3 credentials.' 
+        message: 'File upload not configured. Please set up DigitalOcean Spaces credentials.',
+        required: ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET', 'DO_SPACES_ENDPOINT', 'DO_SPACES_REGION']
       });
     }
 
@@ -584,47 +582,125 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
       const fileName = `media/${Date.now()}-${Math.random().toString(36).substring(7)}${fileExtension}`;
       
       const uploadParams = {
-        Bucket: process.env.AWS_S3_BUCKET,
+        Bucket: process.env.DO_SPACES_BUCKET,
         Key: fileName,
         Body: file.buffer,
         ContentType: file.mimetype,
-        ACL: 'public-read'
+        ACL: 'public-read', // Make files publicly accessible
+        // Optional: Add cache control
+        CacheControl: 'max-age=31536000', // 1 year cache
       };
 
-      console.log('⬆️ Uploading file:', fileName);
-      const result = await s3.upload(uploadParams).promise();
+      console.log('⬆️ Uploading file to DigitalOcean Spaces:', fileName);
+      console.log('📊 Upload params:', {
+        Bucket: uploadParams.Bucket,
+        Key: uploadParams.Key,
+        ContentType: uploadParams.ContentType,
+        Size: file.size
+      });
       
-      return {
-        type: file.mimetype.startsWith('image/') ? 'image' :
-              file.mimetype.startsWith('video/') ? 'video' :
-              file.mimetype.startsWith('audio/') ? 'audio' : 'pdf',
-        url: result.Location,
-        filename: file.originalname,
-        size: file.size
-      };
+      try {
+        const result = await s3.upload(uploadParams).promise();
+        console.log('✅ File uploaded successfully:', result.Location);
+        
+        return {
+          type: file.mimetype.startsWith('image/') ? 'image' :
+                file.mimetype.startsWith('video/') ? 'video' :
+                file.mimetype.startsWith('audio/') ? 'audio' : 'pdf',
+          url: result.Location,
+          filename: file.originalname,
+          size: file.size,
+          spacesKey: fileName // Store for potential deletion
+        };
+      } catch (uploadError) {
+        console.error('❌ Individual file upload error:', uploadError);
+        throw new Error(`Failed to upload ${file.originalname}: ${uploadError.message}`);
+      }
     });
 
     const uploadedFiles = await Promise.all(uploadPromises);
 
-    console.log('✅ Files uploaded successfully:', uploadedFiles.length);
+    console.log('✅ All files uploaded successfully:', uploadedFiles.length);
     res.json({
-      message: 'Files uploaded successfully',
-      files: uploadedFiles
+      message: 'Files uploaded successfully to DigitalOcean Spaces',
+      files: uploadedFiles,
+      storage: 'DigitalOcean Spaces'
     });
 
   } catch (error) {
     console.error('❌ Upload error:', error);
     res.status(500).json({ 
       message: 'Upload failed', 
-      error: error.message 
+      error: error.message,
+      storage: 'DigitalOcean Spaces'
     });
   }
 });
 
-// ADD THE PUBLIC POSTS ENDPOINT HERE ↓↓↓
+// ===== TEST DIGITALOCEAN SPACES CONNECTION =====
+app.get('/api/spaces/test', async (req, res) => {
+  try {
+    console.log('🧪 Testing DigitalOcean Spaces connection...');
+    
+    // Check environment variables
+    const requiredVars = ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET', 'DO_SPACES_ENDPOINT'];
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Missing required environment variables',
+        missing: missingVars,
+        configured: requiredVars.filter(varName => !!process.env[varName])
+      });
+    }
 
-// Get public posts (no authentication required) - NEW ENDPOINT
-// Get public posts (no authentication required) - ENHANCED ENDPOINT
+    // Test connection by listing bucket contents (first few items)
+    const listParams = {
+      Bucket: process.env.DO_SPACES_BUCKET,
+      MaxKeys: 5 // Only get first 5 items for testing
+    };
+
+    const result = await s3.listObjectsV2(listParams).promise();
+    
+    res.json({
+      success: true,
+      message: 'DigitalOcean Spaces connection successful!',
+      config: {
+        endpoint: process.env.DO_SPACES_ENDPOINT,
+        region: process.env.DO_SPACES_REGION,
+        bucket: process.env.DO_SPACES_BUCKET
+      },
+      bucketInfo: {
+        objectCount: result.KeyCount,
+        isTruncated: result.IsTruncated,
+        sampleFiles: result.Contents ? result.Contents.map(obj => ({
+          key: obj.Key,
+          size: obj.Size,
+          lastModified: obj.LastModified
+        })) : []
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ DigitalOcean Spaces test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'DigitalOcean Spaces connection failed',
+      error: error.message,
+      code: error.code,
+      config: {
+        endpoint: process.env.DO_SPACES_ENDPOINT,
+        region: process.env.DO_SPACES_REGION,
+        bucket: process.env.DO_SPACES_BUCKET,
+        hasKey: !!process.env.DO_SPACES_KEY,
+        hasSecret: !!process.env.DO_SPACES_SECRET
+      }
+    });
+  }
+});
+
+// ===== GET PUBLIC POSTS ENDPOINT =====
 app.get('/api/posts/public', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -633,12 +709,11 @@ app.get('/api/posts/public', async (req, res) => {
 
     console.log('🌐 Public posts request:', { page, limit, skip });
 
-    // Get public posts with proper population
     const posts = await Post.find({
       $or: [
         { visibility: 'public' },
         { isPublic: true },
-        { visibility: { $exists: false } } // Posts without visibility field default to public
+        { visibility: { $exists: false } }
       ]
     })
     .populate('userId', 'username avatar verified transparencyScore')
@@ -647,11 +722,10 @@ app.get('/api/posts/public', async (req, res) => {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
-    .lean(); // Use lean() for better performance
+    .lean();
 
     console.log('✅ Found posts:', posts.length);
 
-    // Log first post for debugging
     if (posts.length > 0) {
       console.log('📄 Sample post:', {
         id: posts[0]._id,
@@ -661,14 +735,11 @@ app.get('/api/posts/public', async (req, res) => {
       });
     }
 
-    // Transform for frontend compatibility
     const transformedPosts = posts.map(post => ({
       ...post,
-      // Ensure likes are just user IDs for frontend compatibility
       likes: (post.likes || []).map(like => 
         typeof like === 'object' && like.user ? like.user._id || like.user : like
       ),
-      // Ensure we have the right structure
       userId: post.userId || { username: 'Unknown User', avatar: '?', verified: false }
     }));
 
@@ -683,74 +754,70 @@ app.get('/api/posts/public', async (req, res) => {
   }
 });
 
-// ===== POST ROUTES - UPDATED =====
-// (your existing posts routes go here)
-// ===== POST ROUTES - UPDATED =====
+// ===== POST ROUTES =====
 
-// Get posts (feed) - UPDATED for frontend compatibility
+// Get posts (feed)
 app.get('/api/posts', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get posts from non-blocked users
     const posts = await Post.find({
-      userId: { $nin: req.user.blockedUsers }, // CHANGED: author -> userId
+      userId: { $nin: req.user.blockedUsers },
       $or: [
         { visibility: 'public' },
         { visibility: 'followers', userId: { $in: req.user.following } }
       ]
     })
-    .populate('userId', 'username avatar verified transparencyScore') // CHANGED: author -> userId, name -> username
-    .populate('likes.user', 'username') // ADDED .user
-    .populate('comments.user', 'username avatar verified') // CHANGED: author -> user
+    .populate('userId', 'username avatar verified transparencyScore')
+    .populate('likes.user', 'username')
+    .populate('comments.user', 'username avatar verified')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
     console.log('📝 Retrieved posts:', posts.length);
-    res.json(posts); // CHANGED: return array directly like frontend expects
+    res.json(posts);
   } catch (error) {
     console.error('Get posts error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Create post - UPDATED
+// Create post
 app.post('/api/posts', authenticateToken, async (req, res) => {
   try {
-    const { content, mediaFiles, visibility = 'public' } = req.body; // ADDED mediaFiles
+    const { content, mediaFiles, visibility = 'public' } = req.body;
 
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ message: 'Post content is required' });
     }
 
     const post = new Post({
-      userId: req.user._id, // CHANGED: author -> userId
+      userId: req.user._id,
       content: content.trim(),
-      mediaFiles: mediaFiles || [], // CHANGED: images -> mediaFiles
+      mediaFiles: mediaFiles || [],
       visibility,
-      isPublic: visibility === 'public' // ADDED
+      isPublic: visibility === 'public'
     });
 
     await post.save();
     
     const populatedPost = await Post.findById(post._id)
-      .populate('userId', 'username avatar verified transparencyScore'); // CHANGED
+      .populate('userId', 'username avatar verified transparencyScore');
 
-    // Emit to Socket.IO for real-time updates
     io.emit('new_post', populatedPost);
 
     console.log('✅ Post created:', post._id);
-    res.status(201).json(populatedPost); // CHANGED: return post directly
+    res.status(201).json(populatedPost);
   } catch (error) {
     console.error('Create post error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Like/Unlike post - UPDATED for frontend compatibility
+// Like/Unlike post
 app.post('/api/posts/:postId/like', authenticateToken, async (req, res) => {
   try {
     const post = await Post.findById(req.params.postId);
@@ -758,36 +825,32 @@ app.post('/api/posts/:postId/like', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Check if user already liked (look for user field)
     const existingLike = post.likes.find(like => 
       like.user && like.user.toString() === req.user._id.toString()
     );
     
     if (existingLike) {
-      // Remove like
       post.likes = post.likes.filter(like => 
         !like.user || like.user.toString() !== req.user._id.toString()
       );
     } else {
-      // Add like with user field
       post.likes.push({ user: req.user._id });
     }
 
     await post.save();
     
-    // Populate and return full post like frontend expects
     const populatedPost = await Post.findById(post._id)
       .populate('userId', 'username avatar verified')
       .populate('likes.user', 'username');
 
-    res.json(populatedPost); // Return full post object
+    res.json(populatedPost);
   } catch (error) {
     console.error('Like post error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ===== CONVERSATION ROUTES - NEW FOR FRONTEND =====
+// ===== CONVERSATION ROUTES =====
 app.get('/api/conversations', authenticateToken, async (req, res) => {
   try {
     console.log('💬 Fetching conversations for user:', req.user._id);
@@ -795,7 +858,7 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
     const conversations = await Conversation.find({
       participants: req.user._id
     })
-    .populate('participants', 'username avatar lastActive') // CHANGED: name -> username
+    .populate('participants', 'username avatar lastActive')
     .populate('lastMessage')
     .sort({ updatedAt: -1 });
 
@@ -807,12 +870,11 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== EXISTING CHAT ROUTES (KEEP FOR BACKWARD COMPATIBILITY) =====
+// ===== EXISTING CHAT ROUTES =====
 
-// Get chat conversations (existing route)
+// Get chat conversations
 app.get('/api/chats', authenticateToken, async (req, res) => {
   try {
-    // Find all messages where user is sender or recipient
     const messages = await Message.aggregate([
       {
         $match: {
@@ -840,11 +902,10 @@ app.get('/api/chats', authenticateToken, async (req, res) => {
       }
     ]);
 
-    // Populate user data for chat participants
     const chats = await Message.populate(messages, [
-      { path: 'lastMessage.sender', select: 'username avatar verified' }, // CHANGED
-      { path: 'lastMessage.recipient', select: 'username avatar verified' }, // CHANGED
-      { path: '_id', select: 'username avatar verified' } // CHANGED
+      { path: 'lastMessage.sender', select: 'username avatar verified' },
+      { path: 'lastMessage.recipient', select: 'username avatar verified' },
+      { path: '_id', select: 'username avatar verified' }
     ]);
 
     res.json(chats);
@@ -864,7 +925,6 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
     if (chatRoom === 'public') {
       query = { chatRoom: 'public' };
     } else if (otherUserId) {
-      // Private messages between two users
       query = {
         $or: [
           { sender: req.user._id, recipient: otherUserId },
@@ -874,8 +934,8 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
     }
 
     const messages = await Message.find(query)
-      .populate('sender', 'username avatar verified') // CHANGED
-      .populate('recipient', 'username avatar verified') // CHANGED
+      .populate('sender', 'username avatar verified')
+      .populate('recipient', 'username avatar verified')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
 
@@ -905,10 +965,9 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
     await message.save();
     
     const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'username avatar verified') // CHANGED
-      .populate('recipient', 'username avatar verified'); // CHANGED
+      .populate('sender', 'username avatar verified')
+      .populate('recipient', 'username avatar verified');
 
-    // Emit to Socket.IO for real-time chat
     io.emit('new_message', populatedMessage);
 
     res.status(201).json({ message: 'Message sent successfully', data: populatedMessage });
@@ -918,21 +977,20 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== KEEP ALL OTHER EXISTING ROUTES =====
+// ===== OTHER ROUTES (USER PROFILE, FOLLOW, ETC.) =====
 
 // Get user profile
 app.get('/api/users/:userId', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .populate('followers', 'username avatar verified') // CHANGED
-      .populate('following', 'username avatar verified') // CHANGED
+      .populate('followers', 'username avatar verified')
+      .populate('following', 'username avatar verified')
       .select('-password -email -blockedUsers -stalkerReports');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if current user is blocked
     if (user.blockedUsers.includes(req.user._id)) {
       return res.status(403).json({ message: 'You are blocked by this user' });
     }
@@ -947,10 +1005,10 @@ app.get('/api/users/:userId', authenticateToken, async (req, res) => {
 // Update user profile
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const { username, bio, avatar, isPrivate } = req.body; // CHANGED: name -> username
+    const { username, bio, avatar, isPrivate } = req.body;
     
     const updates = {};
-    if (username) updates.username = username; // CHANGED
+    if (username) updates.username = username;
     if (bio !== undefined) updates.bio = bio;
     if (avatar) updates.avatar = avatar;
     if (isPrivate !== undefined) updates.isPrivate = isPrivate;
@@ -988,11 +1046,9 @@ app.post('/api/users/:userId/follow', authenticateToken, async (req, res) => {
     const isFollowing = currentUser.following.includes(targetUserId);
     
     if (isFollowing) {
-      // Unfollow
       currentUser.following.pull(targetUserId);
       targetUser.followers.pull(currentUserId);
     } else {
-      // Follow
       currentUser.following.push(targetUserId);
       targetUser.followers.push(currentUserId);
     }
@@ -1022,7 +1078,6 @@ app.post('/api/users/:userId/block', authenticateToken, async (req, res) => {
       currentUser.blockedUsers.pull(targetUserId);
     } else {
       currentUser.blockedUsers.push(targetUserId);
-      // Also remove from following/followers
       currentUser.following.pull(targetUserId);
       await User.findByIdAndUpdate(targetUserId, {
         $pull: { following: req.user._id, followers: req.user._id }
@@ -1056,7 +1111,7 @@ app.post('/api/posts/:postId/comments', authenticateToken, async (req, res) => {
     }
 
     const comment = {
-      user: req.user._id, // CHANGED: author -> user
+      user: req.user._id,
       content: content.trim()
     };
 
@@ -1064,7 +1119,7 @@ app.post('/api/posts/:postId/comments', authenticateToken, async (req, res) => {
     await post.save();
 
     const populatedPost = await Post.findById(post._id)
-      .populate('comments.user', 'username avatar verified'); // CHANGED
+      .populate('comments.user', 'username avatar verified');
 
     res.status(201).json({ 
       message: 'Comment added successfully', 
@@ -1097,7 +1152,6 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
 
     await report.save();
 
-    // Update reported user's transparency score
     await User.findByIdAndUpdate(reportedUser, {
       $push: { 
         stalkerReports: {
@@ -1139,6 +1193,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'SickoScoop API is running!',
+    storage: 'DigitalOcean Spaces',
     timestamp: new Date().toISOString()
   });
 });
@@ -1153,30 +1208,22 @@ app.get('/api/debug/jwt', (req, res) => {
   });
 });
 
-// Add ONLY this debug endpoint after line 1084 - NO sample data creation
-
-// ===== DEBUG ENDPOINT (REAL DATA ONLY) =====
-
-// 🔍 DEBUG ENDPOINT - Check what's actually in your database
+// ===== DEBUG ENDPOINT =====
 app.get('/api/debug/posts', async (req, res) => {
   try {
     console.log('🔍 Starting posts debug...');
     
-    // Get all posts without population
     const rawPosts = await Post.find().limit(10);
     console.log('📊 Raw posts count:', rawPosts.length);
     
-    // Get all users
     const users = await User.find().select('username email');
     console.log('👥 Users count:', users.length);
     
-    // Check for orphaned posts
     const orphanedPosts = await Post.find({
       userId: { $nin: users.map(u => u._id) }
     });
     console.log('🚨 Orphaned posts:', orphanedPosts.length);
     
-    // Try population
     const populatedPosts = await Post.find()
       .populate('userId', 'username avatar verified')
       .limit(5);
@@ -1232,12 +1279,11 @@ app.get('/api/debug/posts', async (req, res) => {
   }
 });
 
-// 🛠️ CLEANUP ENDPOINT - Only if needed to remove bad data
+// Cleanup endpoint
 app.post('/api/debug/cleanup', async (req, res) => {
   try {
     console.log('🛠️ Starting database cleanup...');
     
-    // Find and count orphaned posts
     const users = await User.find();
     const userIds = users.map(u => u._id);
     
@@ -1252,7 +1298,6 @@ app.post('/api/debug/cleanup', async (req, res) => {
       });
     }
     
-    // Delete orphaned posts only
     const deleteResult = await Post.deleteMany({
       userId: { $nin: userIds }
     });
@@ -1274,8 +1319,6 @@ app.post('/api/debug/cleanup', async (req, res) => {
   }
 });
 
-// ===== END DEBUG ENDPOINTS =====
-
 // ===== SOCKET.IO REAL-TIME FEATURES =====
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -1295,7 +1338,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ===== ERROR HANDLING & 404 - MUST BE LAST =====
+// ===== ERROR HANDLING & 404 =====
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -1307,10 +1350,8 @@ app.use((error, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// ===== REACT ROUTER URL HANDLING - ADD BEFORE 404 =====
-// Handle React Router URLs (for sharing individual posts)
+// Handle React Router URLs
 app.get('*', (req, res) => {
-  // Only handle non-API routes
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ 
       message: 'API endpoint not found',
@@ -1319,7 +1360,6 @@ app.get('*', (req, res) => {
     });
   }
   
-  // For React Router paths like /post/123, /profile, etc.
   console.log('🔗 React Router path:', req.path);
   res.json({
     message: 'SickoScoop - React handles this route',
@@ -1348,6 +1388,12 @@ mongoose.connect(process.env.MONGODB_URI)
     server.listen(PORT, () => {
       console.log(`SickoScoop API server running on port ${PORT}`);
       console.log('🌐 CORS allowed origins:', allowedOrigins);
+      console.log('💾 Storage: DigitalOcean Spaces');
+      console.log('🔧 Config check:');
+      console.log('  - DO_SPACES_KEY:', !!process.env.DO_SPACES_KEY);
+      console.log('  - DO_SPACES_SECRET:', !!process.env.DO_SPACES_SECRET);
+      console.log('  - DO_SPACES_BUCKET:', !!process.env.DO_SPACES_BUCKET);
+      console.log('  - DO_SPACES_ENDPOINT:', process.env.DO_SPACES_ENDPOINT || 'nyc3.digitaloceanspaces.com');
     });
   })
   .catch((error) => {
