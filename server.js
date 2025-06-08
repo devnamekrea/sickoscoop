@@ -1,4 +1,4 @@
-// server.js - Main server file with DigitalOcean Spaces integration
+// server.js - Main server file with FIXED DigitalOcean Spaces integration
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -62,7 +62,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' })); // Increased for file uploads
 
 // Rate limiting - PRODUCTION SAFE
 const limiter = rateLimit({
@@ -78,37 +78,60 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ===== DIGITALOCEAN SPACES CONFIGURATION =====
-const spacesEndpoint = new AWS.Endpoint(process.env.DO_SPACES_ENDPOINT || 'nyc3.digitaloceanspaces.com');
+// ===== DIGITALOCEAN SPACES CONFIGURATION - FIXED =====
+// Auto-detect region and endpoint based on environment
+const getSpacesConfig = () => {
+  const region = process.env.DO_SPACES_REGION || 'sfo3'; // Default to SF since that's where your bucket is
+  const endpoint = process.env.DO_SPACES_ENDPOINT || `${region}.digitaloceanspaces.com`;
+  
+  console.log('🌐 DigitalOcean Spaces Configuration:');
+  console.log('  Region:', region);
+  console.log('  Endpoint:', endpoint);
+  console.log('  Bucket:', process.env.DO_SPACES_BUCKET);
+  console.log('  Has Key:', !!process.env.DO_SPACES_KEY);
+  console.log('  Has Secret:', !!process.env.DO_SPACES_SECRET);
+  
+  return { region, endpoint };
+};
+
+const { region, endpoint } = getSpacesConfig();
+const spacesEndpoint = new AWS.Endpoint(endpoint);
 const s3 = new AWS.S3({
   endpoint: spacesEndpoint,
   accessKeyId: process.env.DO_SPACES_KEY,
   secretAccessKey: process.env.DO_SPACES_SECRET,
-  region: process.env.DO_SPACES_REGION || 'nyc3',
-  // Force path style for DigitalOcean Spaces compatibility
+  region: region,
   s3ForcePathStyle: false,
   signatureVersion: 'v4'
 });
 
-// Multer configuration for file uploads
+// Multer configuration for file uploads - UPDATED file size limits
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit
+    fileSize: 500 * 1024 * 1024, // 500MB limit (increased from 100MB)
+    files: 10 // Maximum 10 files per upload
   },
   fileFilter: (req, file, cb) => {
     // Allow images, videos, audio, and PDFs
     const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
-      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3',
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg',
+      'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm', 'video/mov',
+      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4',
       'application/pdf'
     ];
+    
+    console.log('📁 File filter check:', {
+      filename: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      allowed: allowedTypes.includes(file.mimetype)
+    });
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not supported'), false);
+      cb(new Error(`File type ${file.mimetype} not supported. Allowed types: ${allowedTypes.join(', ')}`), false);
     }
   }
 });
@@ -120,12 +143,17 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'active',
     storage: 'DigitalOcean Spaces',
+    spacesConfig: {
+      region: region,
+      endpoint: endpoint,
+      bucket: process.env.DO_SPACES_BUCKET || 'Not configured'
+    },
     endpoints: {
       auth: ['POST /api/auth/login', 'POST /api/auth/register'],
       posts: ['GET /api/posts', 'POST /api/posts', 'GET /api/posts/public'],
       media: ['POST /api/media/upload'],
       chat: ['GET /api/conversations'],
-      other: ['GET /api/health']
+      other: ['GET /api/health', 'GET /api/spaces/test']
     },
     timestamp: new Date().toISOString()
   });
@@ -555,53 +583,71 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
-// ===== DIGITALOCEAN SPACES MEDIA UPLOAD ROUTE =====
+// ===== DIGITALOCEAN SPACES MEDIA UPLOAD ROUTE - FIXED =====
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
   try {
     console.log('📁 File upload request received');
     console.log('Files count:', req.files ? req.files.length : 0);
+    console.log('User:', req.user.username);
 
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'No files uploaded' });
+      return res.status(400).json({ 
+        message: 'No files uploaded',
+        debug: {
+          files: req.files,
+          body: req.body,
+          headers: req.headers['content-type']
+        }
+      });
     }
 
     // Check if DigitalOcean Spaces is configured
-    if (!process.env.DO_SPACES_KEY || !process.env.DO_SPACES_SECRET || !process.env.DO_SPACES_BUCKET) {
-      console.error('❌ DigitalOcean Spaces not configured. Missing environment variables:');
-      console.error('DO_SPACES_KEY:', !!process.env.DO_SPACES_KEY);
-      console.error('DO_SPACES_SECRET:', !!process.env.DO_SPACES_SECRET);
-      console.error('DO_SPACES_BUCKET:', !!process.env.DO_SPACES_BUCKET);
+    const requiredEnvVars = ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      console.error('❌ DigitalOcean Spaces not configured. Missing environment variables:', missingVars);
       return res.status(500).json({ 
         message: 'File upload not configured. Please set up DigitalOcean Spaces credentials.',
-        required: ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET', 'DO_SPACES_ENDPOINT', 'DO_SPACES_REGION']
+        missing: missingVars,
+        configured: requiredEnvVars.filter(varName => !!process.env[varName]),
+        help: {
+          endpoint: `Should be: ${region}.digitaloceanspaces.com`,
+          region: `Should be: ${region}`,
+          bucket: 'Your DigitalOcean Spaces bucket name'
+        }
       });
     }
 
-    const uploadPromises = req.files.map(async (file) => {
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `media/${Date.now()}-${Math.random().toString(36).substring(7)}${fileExtension}`;
-      
-      const uploadParams = {
-        Bucket: process.env.DO_SPACES_BUCKET,
-        Key: fileName,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        ACL: 'public-read', // Make files publicly accessible
-        // Optional: Add cache control
-        CacheControl: 'max-age=31536000', // 1 year cache
-      };
+    console.log('🔧 Using configuration:', {
+      region: region,
+      endpoint: endpoint,
+      bucket: process.env.DO_SPACES_BUCKET
+    });
 
-      console.log('⬆️ Uploading file to DigitalOcean Spaces:', fileName);
-      console.log('📊 Upload params:', {
-        Bucket: uploadParams.Bucket,
-        Key: uploadParams.Key,
-        ContentType: uploadParams.ContentType,
-        Size: file.size
-      });
-      
+    const uploadPromises = req.files.map(async (file, index) => {
       try {
+        const fileExtension = path.extname(file.originalname);
+        const fileName = `media/${Date.now()}-${Math.random().toString(36).substring(7)}${fileExtension}`;
+        
+        const uploadParams = {
+          Bucket: process.env.DO_SPACES_BUCKET,
+          Key: fileName,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          ACL: 'public-read', // Make files publicly accessible
+          CacheControl: 'max-age=31536000', // 1 year cache
+        };
+
+        console.log(`⬆️ Uploading file ${index + 1}/${req.files.length}:`, {
+          filename: file.originalname,
+          size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+          type: file.mimetype,
+          spacesKey: fileName
+        });
+        
         const result = await s3.upload(uploadParams).promise();
-        console.log('✅ File uploaded successfully:', result.Location);
+        console.log(`✅ File ${index + 1} uploaded successfully:`, result.Location);
         
         return {
           type: file.mimetype.startsWith('image/') ? 'image' :
@@ -613,7 +659,12 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
           spacesKey: fileName // Store for potential deletion
         };
       } catch (uploadError) {
-        console.error('❌ Individual file upload error:', uploadError);
+        console.error(`❌ Individual file upload error for ${file.originalname}:`, {
+          error: uploadError.message,
+          code: uploadError.code,
+          statusCode: uploadError.statusCode,
+          region: uploadError.region
+        });
         throw new Error(`Failed to upload ${file.originalname}: ${uploadError.message}`);
       }
     });
@@ -621,29 +672,56 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
     const uploadedFiles = await Promise.all(uploadPromises);
 
     console.log('✅ All files uploaded successfully:', uploadedFiles.length);
+    
     res.json({
-      message: 'Files uploaded successfully to DigitalOcean Spaces',
+      message: `Successfully uploaded ${uploadedFiles.length} file(s) to DigitalOcean Spaces`,
       files: uploadedFiles,
-      storage: 'DigitalOcean Spaces'
+      storage: {
+        provider: 'DigitalOcean Spaces',
+        region: region,
+        endpoint: endpoint,
+        bucket: process.env.DO_SPACES_BUCKET
+      },
+      uploadStats: {
+        totalFiles: uploadedFiles.length,
+        totalSize: uploadedFiles.reduce((sum, file) => sum + file.size, 0),
+        averageSize: Math.round(uploadedFiles.reduce((sum, file) => sum + file.size, 0) / uploadedFiles.length)
+      }
     });
 
   } catch (error) {
-    console.error('❌ Upload error:', error);
+    console.error('❌ Upload error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     res.status(500).json({ 
       message: 'Upload failed', 
       error: error.message,
-      storage: 'DigitalOcean Spaces'
+      storage: {
+        provider: 'DigitalOcean Spaces',
+        region: region,
+        endpoint: endpoint,
+        configured: !!process.env.DO_SPACES_KEY && !!process.env.DO_SPACES_SECRET && !!process.env.DO_SPACES_BUCKET
+      },
+      troubleshooting: {
+        checkCredentials: 'Verify DO_SPACES_KEY and DO_SPACES_SECRET are correct',
+        checkRegion: `Ensure your bucket is in region: ${region}`,
+        checkBucket: 'Verify DO_SPACES_BUCKET name matches your actual bucket',
+        checkPermissions: 'Ensure your DigitalOcean Spaces key has write permissions'
+      }
     });
   }
 });
 
-// ===== TEST DIGITALOCEAN SPACES CONNECTION =====
+// ===== TEST DIGITALOCEAN SPACES CONNECTION - ENHANCED =====
 app.get('/api/spaces/test', async (req, res) => {
   try {
     console.log('🧪 Testing DigitalOcean Spaces connection...');
     
     // Check environment variables
-    const requiredVars = ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET', 'DO_SPACES_ENDPOINT'];
+    const requiredVars = ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET'];
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
@@ -651,7 +729,14 @@ app.get('/api/spaces/test', async (req, res) => {
         success: false,
         message: 'Missing required environment variables',
         missing: missingVars,
-        configured: requiredVars.filter(varName => !!process.env[varName])
+        configured: requiredVars.filter(varName => !!process.env[varName]),
+        help: {
+          DO_SPACES_KEY: 'Your DigitalOcean Spaces access key',
+          DO_SPACES_SECRET: 'Your DigitalOcean Spaces secret key',
+          DO_SPACES_BUCKET: 'Your DigitalOcean Spaces bucket name',
+          DO_SPACES_REGION: `Optional, defaults to ${region}`,
+          DO_SPACES_ENDPOINT: `Optional, defaults to ${endpoint}`
+        }
       });
     }
 
@@ -661,25 +746,37 @@ app.get('/api/spaces/test', async (req, res) => {
       MaxKeys: 5 // Only get first 5 items for testing
     };
 
+    console.log('📡 Testing connection to:', {
+      bucket: process.env.DO_SPACES_BUCKET,
+      endpoint: endpoint,
+      region: region
+    });
+
     const result = await s3.listObjectsV2(listParams).promise();
     
     res.json({
       success: true,
-      message: 'DigitalOcean Spaces connection successful!',
+      message: 'DigitalOcean Spaces connection successful! 🎉',
       config: {
-        endpoint: process.env.DO_SPACES_ENDPOINT,
-        region: process.env.DO_SPACES_REGION,
-        bucket: process.env.DO_SPACES_BUCKET
+        endpoint: endpoint,
+        region: region,
+        bucket: process.env.DO_SPACES_BUCKET,
+        credentialsConfigured: true
       },
       bucketInfo: {
         objectCount: result.KeyCount,
         isTruncated: result.IsTruncated,
         sampleFiles: result.Contents ? result.Contents.map(obj => ({
           key: obj.Key,
-          size: obj.Size,
+          size: `${(obj.Size / 1024).toFixed(2)} KB`,
           lastModified: obj.LastModified
         })) : []
-      }
+      },
+      recommendations: [
+        'Your DigitalOcean Spaces is properly configured',
+        'File uploads should work correctly',
+        'Make sure your bucket has public read access for uploaded files'
+      ]
     });
 
   } catch (error) {
@@ -687,15 +784,28 @@ app.get('/api/spaces/test', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'DigitalOcean Spaces connection failed',
-      error: error.message,
-      code: error.code,
+      error: {
+        message: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+        region: error.region
+      },
       config: {
-        endpoint: process.env.DO_SPACES_ENDPOINT,
-        region: process.env.DO_SPACES_REGION,
+        endpoint: endpoint,
+        region: region,
         bucket: process.env.DO_SPACES_BUCKET,
         hasKey: !!process.env.DO_SPACES_KEY,
         hasSecret: !!process.env.DO_SPACES_SECRET
-      }
+      },
+      troubleshooting: [
+        'Check that your DigitalOcean Spaces credentials are correct',
+        `Verify your bucket exists in region: ${region}`,
+        'Ensure your API key has proper permissions',
+        'Confirm your bucket name matches exactly',
+        error.code === 'NoSuchBucket' ? 'The specified bucket does not exist or is in a different region' : null,
+        error.code === 'InvalidAccessKeyId' ? 'Your access key ID is invalid' : null,
+        error.code === 'SignatureDoesNotMatch' ? 'Your secret access key is incorrect' : null
+      ].filter(Boolean)
     });
   }
 });
@@ -731,7 +841,8 @@ app.get('/api/posts/public', async (req, res) => {
         id: posts[0]._id,
         content: posts[0].content?.substring(0, 50),
         author: posts[0].userId?.username,
-        hasUserId: !!posts[0].userId
+        hasUserId: !!posts[0].userId,
+        mediaFiles: posts[0].mediaFiles?.length || 0
       });
     }
 
@@ -794,6 +905,8 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Post content is required' });
     }
 
+    console.log('📝 Creating post with media files:', mediaFiles?.length || 0);
+
     const post = new Post({
       userId: req.user._id,
       content: content.trim(),
@@ -809,7 +922,12 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
 
     io.emit('new_post', populatedPost);
 
-    console.log('✅ Post created:', post._id);
+    console.log('✅ Post created with media:', {
+      postId: post._id,
+      mediaCount: mediaFiles?.length || 0,
+      content: content.substring(0, 50) + '...'
+    });
+    
     res.status(201).json(populatedPost);
   } catch (error) {
     console.error('Create post error:', error);
@@ -1192,8 +1310,13 @@ app.get('/api/users/:userId/transparency', authenticateToken, async (req, res) =
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'SickoScoop API is running!',
-    storage: 'DigitalOcean Spaces',
+    message: 'SickoScoop API is running! 🚀',
+    storage: {
+      provider: 'DigitalOcean Spaces',
+      region: region,
+      endpoint: endpoint,
+      configured: !!process.env.DO_SPACES_KEY && !!process.env.DO_SPACES_SECRET && !!process.env.DO_SPACES_BUCKET
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -1234,7 +1357,8 @@ app.get('/api/debug/posts', async (req, res) => {
         _id: post._id,
         content: post.content?.substring(0, 50) + '...',
         userId: post.userId,
-        hasUsername: !!post.userId?.username
+        hasUsername: !!post.userId?.username,
+        mediaFiles: post.mediaFiles?.length || 0
       });
     });
     
@@ -1265,7 +1389,8 @@ app.get('/api/debug/posts', async (req, res) => {
           _id: post._id,
           content: post.content?.substring(0, 100),
           authorUsername: post.userId?.username || 'NO USERNAME',
-          authorId: post.userId?._id || 'NO USER ID'
+          authorId: post.userId?._id || 'NO USER ID',
+          mediaFiles: post.mediaFiles?.length || 0
         }))
       }
     });
@@ -1342,12 +1467,26 @@ io.on('connection', (socket) => {
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ message: 'File too large' });
+      return res.status(400).json({ 
+        message: `File too large. Maximum size is ${500}MB.`,
+        code: 'FILE_TOO_LARGE',
+        maxSize: '500MB'
+      });
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ 
+        message: 'Too many files. Maximum 10 files per upload.',
+        code: 'TOO_MANY_FILES',
+        maxFiles: 10
+      });
     }
   }
   
   console.error('❌ Unhandled error:', error);
-  res.status(500).json({ message: 'Internal server error' });
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? error.message : 'Server error'
+  });
 });
 
 // Handle React Router URLs
@@ -1356,7 +1495,15 @@ app.get('*', (req, res) => {
     return res.status(404).json({ 
       message: 'API endpoint not found',
       requestedUrl: req.originalUrl,
-      method: req.method
+      method: req.method,
+      availableEndpoints: [
+        '/api/health',
+        '/api/spaces/test',
+        '/api/auth/login',
+        '/api/auth/register', 
+        '/api/posts/public',
+        '/api/media/upload'
+      ]
     });
   }
   
@@ -1383,21 +1530,23 @@ app.use('*', (req, res) => {
 // ===== DATABASE CONNECTION & SERVER START =====
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
     const PORT = process.env.PORT || 3001;
     server.listen(PORT, () => {
-      console.log(`SickoScoop API server running on port ${PORT}`);
+      console.log(`🚀 SickoScoop API server running on port ${PORT}`);
       console.log('🌐 CORS allowed origins:', allowedOrigins);
       console.log('💾 Storage: DigitalOcean Spaces');
-      console.log('🔧 Config check:');
-      console.log('  - DO_SPACES_KEY:', !!process.env.DO_SPACES_KEY);
-      console.log('  - DO_SPACES_SECRET:', !!process.env.DO_SPACES_SECRET);
-      console.log('  - DO_SPACES_BUCKET:', !!process.env.DO_SPACES_BUCKET);
-      console.log('  - DO_SPACES_ENDPOINT:', process.env.DO_SPACES_ENDPOINT || 'nyc3.digitaloceanspaces.com');
+      console.log('🔧 Configuration:');
+      console.log('  - Region:', region);
+      console.log('  - Endpoint:', endpoint);
+      console.log('  - Bucket:', process.env.DO_SPACES_BUCKET || 'NOT SET');
+      console.log('  - Key configured:', !!process.env.DO_SPACES_KEY);
+      console.log('  - Secret configured:', !!process.env.DO_SPACES_SECRET);
+      console.log('🔗 Test your setup: GET /api/spaces/test');
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
     process.exit(1);
   });
 
