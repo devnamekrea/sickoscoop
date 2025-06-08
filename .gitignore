@@ -10,3 +10,6 @@ backend/
 .Spotlight-V100
 .Trashes
 .DS_Store
+.env
+.env.*
+*.env
