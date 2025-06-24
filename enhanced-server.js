@@ -1166,13 +1166,22 @@ app.post('/api/auth/verify', async (req, res) => {
 });
 
 // Public posts
-app.get('/api/posts/public', async (req, res) => {
+
+app.get('/api/posts', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ $or: [{ visibility: 'public' }, { isPublic: true }] })
+    console.log('📱 Fetching posts for authenticated user:', req.user.username);
+
+    const posts = await Post.find({ 
+      $or: [
+        { visibility: 'public' }, 
+        { isPublic: true },
+        { userId: req.user._id || req.user.id } // Include user's own posts
+      ]
+    })
     .populate('userId', 'username avatar verified transparencyScore')
     .populate('likes.user', 'username')
     .populate('comments.user', 'username avatar verified')
@@ -1188,10 +1197,45 @@ app.get('/api/posts/public', async (req, res) => {
       )
     }));
 
+    console.log(`✅ Returning ${transformedPosts.length} posts for ${req.user.username}`);
     res.json(transformedPosts);
   } catch (error) {
-    console.error('Public posts error:', error);
-    res.status(500).json({ message: 'Failed to fetch public posts' });
+    console.error('❌ Get posts error:', error);
+    res.status(500).json({ message: 'Failed to fetch posts' });
+  }
+});
+
+// ✅ ADD THIS - Public posts endpoint (no authentication required)
+app.get('/api/posts/public', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const skip = (page - 1) * limit;
+
+    console.log('📱 Public posts requested - no auth required');
+
+    const posts = await Post.find({
+      $or: [
+        { visibility: 'public' },
+        { isPublic: true }
+      ]
+    })
+    .populate('userId', 'username avatar verified transparencyScore')
+    .populate('likes.user', 'username')
+    .populate('comments.user', 'username avatar verified')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+    console.log(`✅ Returning ${posts.length} public posts`);
+    res.json(posts);
+  } catch (error) {
+    console.error('❌ Public posts error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch public posts',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Server error'
+    });
   }
 });
 
