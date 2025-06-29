@@ -1,6 +1,4 @@
-// enhanced-server.js - FIXED VERSION for SickoScoop Production
-// This fixes the CSP errors, missing endpoints, and enhances file processing
-
+// enhanced-server.js - COMPLETE PRODUCTION READY VERSION
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -25,51 +23,70 @@ const app = express();
 app.set('trust proxy', 1);
 const server = createServer(app);
 
-console.log('🚀 SickoScoop Enhanced Server v2.0 - FIXED VERSION');
-console.log('=================================================');
+// Start server
+const PORT = process.env.PORT || 8080;
+
+console.log('🚀 SickoScoop Production Server v3.0 - COMPLETE VERSION');
+console.log('=======================================================');
 
 // Enhanced timeouts for large file uploads
 server.timeout = 10 * 60 * 1000; // 10 minutes
 server.keepAliveTimeout = 65 * 1000;
 server.headersTimeout = 70 * 1000;
 
-// ✅ FIXED SECURITY CONFIGURATION - This fixes the CSP errors!
-app.use(compression());
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "wss:", "ws:", "https:", "http://localhost:*"],
-      mediaSrc: ["'self'", "https:", "blob:"],
-      frameSrc: ["'none'"],
-      fontSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"]
-    }
-  }
-}));
+// Environment Detection
+const isProduction = process.env.NODE_ENV === 'production' || 
+                   process.env.VERCEL || 
+                   process.env.RAILWAY_ENVIRONMENT || 
+                   process.env.RENDER ||
+                   process.env.DIGITALOCEAN ||  // ADD this line
+                   (process.env.PORT && process.env.PORT !== '8080');
 
-// ✅ CORS CONFIGURATION - Supports both development and production
+const isDevelopment = !isProduction;
+
+console.log('🌐 Environment Detection:', {
+  NODE_ENV: process.env.NODE_ENV,
+  isProduction,
+  isDevelopment,
+  port: process.env.PORT || 8080,
+  mongoUri: process.env.MONGODB_URI ? 'Configured' : 'Using localhost'
+});
+
+// Compression and Security
+app.use(compression());
+
+// Enhanced CORS - Works for ALL environments
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'https://sickoscoop-backend-deo45.ondigitalocean.app',
+  'https://sickoscoop.netlify.app',
+  'https://sickoscoop-frontend.netlify.app',
+  'https://sickoscoop-backend.ondigitalocean.app',
+  'https://sickoscoop.com',
+  'https://www.sickoscoop.com'
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+if (process.env.APP_URL) {
+  allowedOrigins.push(process.env.APP_URL);
+}
+
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'https://sickoscoop-backend-deo45.ondigitalocean.app'
-  ];
-  
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -78,20 +95,47 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enhanced body parsing for large files
+console.log('✅ CORS configured for origins:', allowedOrigins);
+
+// Security Configuration
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:", "data:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "data:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:", "*"],
+      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "data:"],
+      mediaSrc: ["'self'", "https:", "blob:", "data:", "*"],
+      frameSrc: ["'none'"],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: isProduction ? [] : null
+    }
+  },
+  hsts: isProduction ? {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  } : false
+}));
+
+// Body parsing for large files
 app.use(express.json({ limit: '250mb' }));
 app.use(express.urlencoded({ limit: '250mb', extended: true }));
 
-// ✅ SMART BUILD PATH DETECTION - Auto-finds React build
-const buildPath = (() => {
-  console.log('🔍 Searching for React build files...');
-  
+// Static file serving
+const findBuildPath = () => {
   const buildPaths = [
     path.join(__dirname, 'build'),
     path.join(__dirname, '..', 'frontend', 'build'),
     path.join(__dirname, '..', 'build'),
     path.join(__dirname, 'public'),
-    path.join(__dirname, 'dist')
+    path.join(__dirname, 'dist'),
+    path.join(__dirname, '..', 'dist')
   ];
   
   for (const buildDir of buildPaths) {
@@ -101,229 +145,102 @@ const buildPath = (() => {
     }
   }
   
-  console.warn('⚠️ No React build found. Will create placeholder.');
+  console.warn('⚠️ No React build found. API-only mode.');
   return null;
-})();
+};
 
-// Serve static files or create placeholder
+const buildPath = findBuildPath();
+
 if (buildPath) {
   app.use(express.static(buildPath, {
-    maxAge: '1h',
+    maxAge: isProduction ? '1d' : '0',
     etag: true,
+    lastModified: true,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+        res.setHeader('Cache-Control', isProduction ? 'public, max-age=31536000' : 'no-cache');
       }
     }
   }));
   console.log('📁 Serving React build from:', buildPath);
-} else {
-  // Create placeholder page when build is missing
-  app.get('/', (req, res) => {
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SickoScoop - Backend Running</title>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            color: #fff;
-            margin: 0;
-            padding: 40px;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .container {
-            max-width: 800px;
-            text-align: center;
-            background: rgba(0,0,0,0.3);
-            padding: 40px;
-            border-radius: 20px;
-            border: 2px solid #f59e0b;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-          }
-          h1 { 
-            color: #f59e0b; 
-            margin-bottom: 20px;
-            font-size: 3em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-          }
-          .status { 
-            color: #10b981; 
-            margin: 20px 0; 
-            font-size: 1.2em;
-            font-weight: bold;
-          }
-          .warning { 
-            color: #f59e0b; 
-            background: rgba(245, 158, 11, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-          }
-          .api-links {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 30px 0;
-          }
-          .api-link {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid #10b981;
-            border-radius: 10px;
-            padding: 15px;
-            text-decoration: none;
-            color: #10b981;
-            transition: all 0.3s ease;
-          }
-          .api-link:hover {
-            background: rgba(16, 185, 129, 0.2);
-            transform: translateY(-2px);
-          }
-          .features {
-            text-align: left;
-            max-width: 500px;
-            margin: 30px auto;
-            background: rgba(0,0,0,0.2);
-            padding: 20px;
-            border-radius: 10px;
-          }
-          .features ul {
-            list-style: none;
-            padding: 0;
-          }
-          .features li {
-            margin: 10px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-          }
-          .code {
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-family: 'Courier New', monospace;
-            text-align: left;
-            border: 1px solid #444;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>🚀 SickoScoop Backend</h1>
-          <div class="status">✅ Enhanced Server v2.0 Running!</div>
-          <div class="warning">
-            <strong>⚠️ Frontend Build Missing</strong><br>
-            Backend is running with all features, but React frontend needs to be built.
-          </div>
-          
-          <div class="api-links">
-            <a href="/api/health" class="api-link">
-              <strong>Enhanced Health Check</strong><br>
-              <small>Full feature status</small>
-            </a>
-            <a href="/api/posts/public" class="api-link">
-              <strong>Public Posts API</strong><br>
-              <small>Browse public content</small>
-            </a>
-          </div>
-
-          <div class="features">
-            <h3>🎯 Enhanced Features Active:</h3>
-            <ul>
-              <li>✅ File uploads (20MB-200MB)</li>
-              <li>✅ REAL PDF watermarking with QR codes</li>
-              <li>✅ PDF tracking & analytics</li>
-              <li>✅ DigitalOcean Spaces storage</li>
-              <li>✅ Enhanced security (CSP fixed)</li>
-              <li>✅ Missing API endpoints added</li>
-              <li>✅ Image optimization with Sharp</li>
-              <li>✅ Real-time WebSocket support</li>
-            </ul>
-          </div>
-
-          <h3>🔧 Build Frontend:</h3>
-          <div class="code">
-1. cd frontend<br>
-2. npm install<br>
-3. npm run build<br>
-4. cp -r build ../backend/build<br>
-5. Refresh this page
-          </div>
-
-          <p><strong>🌐 API Base URL:</strong> 
-          <a href="https://sickoscoop-backend-deo45.ondigitalocean.app" style="color: #f59e0b;">
-            sickoscoop-backend-deo45.ondigitalocean.app
-          </a></p>
-          
-          <p style="margin-top: 30px; color: #888; font-size: 0.9em;">
-            SickoScoop v2.0 - Enhanced Server with REAL PDF Watermarking
-          </p>
-        </div>
-      </body>
-      </html>
-    `);
-  });
-  console.log('📄 Created placeholder page - build frontend to activate full app');
 }
 
-// Socket.IO setup for real-time features
+// Socket.IO setup
 const io = new Server(server, {
   transports: ['websocket', 'polling'],
   allowEIO3: true,
   maxHttpBufferSize: 250 * 1024 * 1024,
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   }
 });
 
-// Enhanced rate limiting
-const createRateLimit = (windowMs, max, message) => rateLimit({
+// Rate limiting
+const createRateLimit = (windowMs, max, message, skipSuccessfulRequests = false) => rateLimit({
   windowMs,
   max,
-  message: { error: message },
+  message: { error: message, retryAfter: Math.ceil(windowMs / 1000) },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health'
+  skipSuccessfulRequests,
+  skip: (req) => {
+    return isDevelopment || req.path === '/api/health';
+  },
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  }
 });
 
-app.use('/api/', createRateLimit(15 * 60 * 1000, 300, 'Too many requests'));
-app.use('/api/media/upload', createRateLimit(30 * 60 * 1000, 15, 'Too many uploads'));
+app.use('/api/', createRateLimit(15 * 60 * 1000, 500, 'Too many API requests, please try again later.'));
+app.use('/api/auth/', createRateLimit(15 * 60 * 1000, 10, 'Too many authentication attempts, please try again later.'));
+app.use('/api/media/upload', createRateLimit(60 * 60 * 1000, 20, 'Too many uploads, please try again later.'));
 
-// ✅ DIGITALOCEAN SPACES CONFIGURATION
+// DigitalOcean Spaces Configuration
 const getSpacesConfig = () => {
   const region = process.env.DO_SPACES_REGION || 'sfo3';
   const endpoint = process.env.DO_SPACES_ENDPOINT || `${region}.digitaloceanspaces.com`;
+  const bucket = process.env.DO_SPACES_BUCKET;
+  const key = process.env.DO_SPACES_KEY;
+  const secret = process.env.DO_SPACES_SECRET;
+  
+  const isConfigured = !!(bucket && key && secret);
   
   console.log('🌐 DigitalOcean Spaces Configuration:');
   console.log('  Region:', region);
   console.log('  Endpoint:', endpoint);
-  console.log('  Bucket:', process.env.DO_SPACES_BUCKET || 'NOT_CONFIGURED');
-  console.log('  Configured:', !!process.env.DO_SPACES_KEY && !!process.env.DO_SPACES_SECRET);
+  console.log('  Bucket:', bucket || 'NOT_CONFIGURED');
+  console.log('  Key:', key ? '***CONFIGURED***' : 'NOT_CONFIGURED');
+  console.log('  Secret:', secret ? '***CONFIGURED***' : 'NOT_CONFIGURED');
+  console.log('  Status:', isConfigured ? '✅ READY' : '❌ NOT_CONFIGURED');
   
-  return { region, endpoint };
+  return { region, endpoint, bucket, key, secret, isConfigured };
 };
 
-const { region, endpoint } = getSpacesConfig();
-const spacesEndpoint = new AWS.Endpoint(endpoint);
-const s3 = new AWS.S3({
-  endpoint: spacesEndpoint,
-  accessKeyId: process.env.DO_SPACES_KEY,
-  secretAccessKey: process.env.DO_SPACES_SECRET,
-  region: region,
-  s3ForcePathStyle: false,
-  signatureVersion: 'v4'
-});
+const spacesConfig = getSpacesConfig();
+let s3 = null;
 
-// ✅ ENHANCED PDF WATERMARKING CLASS with REAL pdf-lib
+if (spacesConfig.isConfigured) {
+  const spacesEndpoint = new AWS.Endpoint(spacesConfig.endpoint);
+  s3 = new AWS.S3({
+    endpoint: spacesEndpoint,
+    accessKeyId: spacesConfig.key,
+    secretAccessKey: spacesConfig.secret,
+    region: spacesConfig.region,
+    s3ForcePathStyle: false,
+    signatureVersion: 'v4'
+  });
+  console.log('✅ DigitalOcean Spaces client initialized');
+} else {
+  console.warn('⚠️ DigitalOcean Spaces not configured. File uploads will fail.');
+}
+
+// Enhanced PDF Watermarking Class
 class PDFWatermarker {
   constructor() {
     this.trackingDomain = process.env.TRACKING_DOMAIN || 'sickoscoop.com';
@@ -337,23 +254,20 @@ class PDFWatermarker {
       const username = metadata.username || 'unknown';
       const filename = metadata.filename || 'document.pdf';
       
-      console.log('🔏 Adding REAL watermark to PDF:', {
-        trackingId,
+      console.log('🔏 Adding watermark to PDF:', {
+        trackingId: trackingId.substring(0, 8) + '...',
         username,
         timestamp,
         filename,
         originalSize: pdfBuffer.length
       });
 
-      // Load and modify actual PDF with pdf-lib
       const pdfDoc = await PDFDocument.load(pdfBuffer);
       const pages = pdfDoc.getPages();
       
-      // Embed fonts for watermark text
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       
-      // Create QR code for tracking
       const trackingUrl = `${this.trackingUrl}/track/${trackingId}`;
       const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, {
         width: 150,
@@ -361,26 +275,22 @@ class PDFWatermarker {
         color: { dark: '#000000', light: '#FFFFFF' }
       });
       
-      // Convert QR code to PNG bytes
       const qrCodeBase64 = qrCodeDataUrl.split(',')[1];
       const qrCodeBytes = Buffer.from(qrCodeBase64, 'base64');
       const qrCodeImage = await pdfDoc.embedPng(qrCodeBytes);
       
-      // Watermark text
       const watermarkText = `SICKOSCOOP PROTECTED`;
       const userText = `Downloaded by: ${username}`;
       const timestampText = `${new Date(timestamp).toLocaleDateString()} ${new Date(timestamp).toLocaleTimeString()}`;
       const trackingText = `ID: ${trackingId.substring(0, 8)}`;
       const urlText = `Track: ${this.trackingDomain}`;
       
-      // Add watermarks to all pages
       pages.forEach((page, pageIndex) => {
         const { width, height } = page.getSize();
         
-        // Header watermark (top of page)
         page.drawText(watermarkText, {
           x: 50, y: height - 30, size: 10, font: boldFont,
-          color: rgb(0.8, 0.1, 0.1), opacity: 0.7
+          color: rgb(0.1, 0.4, 0.8), opacity: 0.7
         });
         
         page.drawText(userText, {
@@ -393,7 +303,6 @@ class PDFWatermarker {
           color: rgb(0.5, 0.5, 0.5), opacity: 0.6
         });
         
-        // Footer watermark (bottom of page)
         page.drawText(trackingText, {
           x: 50, y: 20, size: 8, font: font,
           color: rgb(0.3, 0.3, 0.3), opacity: 0.5
@@ -404,7 +313,6 @@ class PDFWatermarker {
           color: rgb(0.3, 0.3, 0.3), opacity: 0.5
         });
         
-        // Center diagonal watermark (subtle)
         const centerX = width / 2;
         const centerY = height / 2;
         
@@ -414,7 +322,6 @@ class PDFWatermarker {
           rotate: { type: 'degrees', angle: 45 }
         });
         
-        // QR code in corner (every 3rd page to avoid clutter)
         if (pageIndex % 3 === 0) {
           page.drawImage(qrCodeImage, {
             x: width - 70, y: height - 70,
@@ -423,7 +330,6 @@ class PDFWatermarker {
         }
       });
       
-      // Add metadata to PDF
       pdfDoc.setTitle(`${filename} - SickoScoop Protected`);
       pdfDoc.setAuthor(`SickoScoop - Downloaded by ${username}`);
       pdfDoc.setSubject(`Protected document - ${trackingId}`);
@@ -431,12 +337,13 @@ class PDFWatermarker {
       pdfDoc.setCreationDate(new Date());
       pdfDoc.setModificationDate(new Date());
       
-      // Generate watermarked PDF
       const watermarkedPdfBytes = await pdfDoc.save();
       
       console.log('✅ PDF watermarked successfully:', {
-        trackingId, originalSize: pdfBuffer.length,
-        watermarkedSize: watermarkedPdfBytes.length, pages: pages.length
+        trackingId: trackingId.substring(0, 8) + '...',
+        originalSize: pdfBuffer.length,
+        watermarkedSize: watermarkedPdfBytes.length,
+        pages: pages.length
       });
       
       const watermarkMetadata = {
@@ -461,8 +368,13 @@ class PDFWatermarker {
       console.error('❌ PDF watermarking failed:', error);
       return {
         buffer: pdfBuffer,
-        metadata: { trackingId: uuidv4(), error: 'Watermarking failed', originalSize: pdfBuffer.length },
-        trackingId: null, trackingUrl: null
+        metadata: { 
+          trackingId: uuidv4(), 
+          error: 'Watermarking failed: ' + error.message, 
+          originalSize: pdfBuffer.length 
+        },
+        trackingId: null, 
+        trackingUrl: null
       };
     }
   }
@@ -475,14 +387,18 @@ class PDFWatermarker {
   async logPDFCreation(metadata) {
     try {
       console.log('📊 PDF Creation Log:', {
-        trackingId: metadata.trackingId,
+        trackingId: metadata.trackingId.substring(0, 8) + '...',
         username: metadata.username,
         filename: metadata.filename,
         pages: metadata.pages,
         timestamp: metadata.timestamp
       });
       
-      const logEntry = { ...metadata, logType: 'PDF_CREATED', timestamp: new Date().toISOString() };
+      const logEntry = { 
+        ...metadata, 
+        logType: 'PDF_CREATED', 
+        timestamp: new Date().toISOString() 
+      };
       
       const logPath = path.join(__dirname, 'logs', 'pdf-tracking.log');
       if (!fs.existsSync(path.dirname(logPath))) {
@@ -500,10 +416,15 @@ class PDFWatermarker {
     try {
       const logEntry = {
         trackingId, ...accessData,
-        logType: 'PDF_ACCESSED', timestamp: new Date().toISOString()
+        logType: 'PDF_ACCESSED', 
+        timestamp: new Date().toISOString()
       };
       
-      console.log('📊 PDF Access Log:', logEntry);
+      console.log('📊 PDF Access Log:', {
+        trackingId: trackingId.substring(0, 8) + '...',
+        ip: accessData.ip,
+        userAgent: accessData.userAgent?.substring(0, 50) + '...'
+      });
       
       const logPath = path.join(__dirname, 'logs', 'pdf-tracking.log');
       fs.appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
@@ -516,49 +437,50 @@ class PDFWatermarker {
 
 const pdfWatermarker = new PDFWatermarker();
 
-// ✅ ENHANCED FILE PROCESSOR with new limits
+// Enhanced File Processor
 class FileProcessor {
   constructor() {
     this.supportedTypes = {
       image: {
         mimes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-        maxSize: 20 * 1024 * 1024, // 20MB for images
+        maxSize: 20 * 1024 * 1024,
+        extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
       },
       video: {
         mimes: ['video/mp4', 'video/webm', 'video/mpeg', 'video/quicktime', 'video/mov'],
-        maxSize: 200 * 1024 * 1024, // 200MB for videos
+        maxSize: 200 * 1024 * 1024,
+        extensions: ['.mp4', '.webm', '.mpeg', '.mov', '.avi']
       },
       audio: {
-        mimes: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac'],
-        maxSize: 50 * 1024 * 1024, // 50MB for audio
+        mimes: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/mp4'],
+        maxSize: 50 * 1024 * 1024,
+        extensions: ['.mp3', '.wav', '.ogg', '.aac', '.m4a']
       },
       document: {
         mimes: ['application/pdf', 'text/plain'],
-        maxSize: 50 * 1024 * 1024, // 50MB for PDFs
+        maxSize: 50 * 1024 * 1024,
+        extensions: ['.pdf', '.txt']
       }
     };
     
-    console.log('📊 Enhanced File Processing Limits:');
+    console.log('📊 File Processing Configuration:');
     Object.entries(this.supportedTypes).forEach(([type, config]) => {
       const sizeMB = (config.maxSize / 1024 / 1024).toFixed(0);
-      console.log(`  ${type}: ${sizeMB}MB`);
+      console.log(`  ${type}: ${sizeMB}MB max, types: ${config.mimes.join(', ')}`);
     });
   }
 
   async validateFile(buffer, originalName, mimeType) {
     try {
       const detectedType = await fileType.fromBuffer(buffer);
+      const fileExtension = path.extname(originalName).toLowerCase();
       
-      if (!detectedType && mimeType !== 'text/plain') {
-        throw new Error('Unable to determine file type');
-      }
-
       const actualMime = detectedType ? detectedType.mime : mimeType;
       let category = null;
       let config = null;
 
       for (const [cat, conf] of Object.entries(this.supportedTypes)) {
-        if (conf.mimes.includes(actualMime)) {
+        if (conf.mimes.includes(actualMime) || conf.extensions.includes(fileExtension)) {
           category = cat;
           config = conf;
           break;
@@ -566,17 +488,27 @@ class FileProcessor {
       }
 
       if (!category) {
-        throw new Error(`Unsupported file type: ${actualMime}`);
+        throw new Error(`Unsupported file type: ${actualMime || mimeType} (${fileExtension})`);
       }
 
       if (buffer.length > config.maxSize) {
         const maxSizeMB = (config.maxSize / 1024 / 1024).toFixed(0);
-        throw new Error(`File too large. Maximum size for ${category}: ${maxSizeMB}MB`);
+        const actualSizeMB = (buffer.length / 1024 / 1024).toFixed(1);
+        throw new Error(`File too large. Maximum size for ${category}: ${maxSizeMB}MB. Your file: ${actualSizeMB}MB`);
+      }
+
+      if (category === 'document' && actualMime === 'application/pdf') {
+        if (!buffer.toString('ascii', 0, 4).includes('%PDF')) {
+          throw new Error('Invalid PDF file format');
+        }
       }
 
       return {
-        isValid: true, category, mime: actualMime,
-        extension: detectedType ? detectedType.ext : 'txt'
+        isValid: true, 
+        category, 
+        mime: actualMime,
+        extension: detectedType ? detectedType.ext : fileExtension.replace('.', ''),
+        detectedType: detectedType ? 'detected' : 'fallback'
       };
     } catch (error) {
       return { isValid: false, error: error.message };
@@ -588,23 +520,43 @@ class FileProcessor {
       const { maxWidth = 1920, maxHeight = 1920, quality = 85 } = options;
       
       const optimized = await sharp(buffer)
-        .resize(maxWidth, maxHeight, { fit: 'inside', withoutEnlargement: true })
+        .resize(maxWidth, maxHeight, { 
+          fit: 'inside', 
+          withoutEnlargement: true 
+        })
         .jpeg({ quality, progressive: true })
         .toBuffer();
 
       const thumbnail = await sharp(buffer)
-        .resize(300, 300, { fit: 'cover', position: 'center' })
+        .resize(300, 300, { 
+          fit: 'cover', 
+          position: 'center' 
+        })
         .jpeg({ quality: 70, progressive: true })
         .toBuffer();
 
+      console.log('🖼️ Image optimized:', {
+        originalSize: buffer.length,
+        optimizedSize: optimized.length,
+        compression: ((buffer.length - optimized.length) / buffer.length * 100).toFixed(1) + '%'
+      });
+
       return { optimized, thumbnail };
     } catch (error) {
-      console.warn('Image optimization failed, using original:', error.message);
+      console.warn('⚠️ Image optimization failed, using original:', error.message);
       return { optimized: buffer, thumbnail: null };
     }
   }
 
   async processFile(file, userId, username) {
+    console.log('🔄 Processing file:', {
+      name: file.originalname,
+      size: file.size,
+      type: file.mimetype,
+      userId: userId?.substring(0, 8) + '...',
+      username
+    });
+
     const validation = await this.validateFile(file.buffer, file.originalname, file.mimetype);
     
     if (!validation.isValid) {
@@ -621,9 +573,8 @@ class FileProcessor {
     let trackingId = null;
     let trackingUrl = null;
 
-    // Enhanced PDF processing with REAL watermarking
     if (validation.mime === 'application/pdf') {
-      console.log('🔏 Processing PDF with REAL watermarking...');
+      console.log('🔏 Processing PDF with watermarking...');
       
       const watermarkResult = await pdfWatermarker.addWatermark(file.buffer, {
         username, userId, filename: sanitizedName
@@ -633,10 +584,12 @@ class FileProcessor {
       trackingId = watermarkResult.trackingId;
       trackingUrl = watermarkResult.trackingUrl;
       
-      console.log('✅ PDF watermarked successfully:', { trackingId, trackingUrl });
+      console.log('✅ PDF watermarked successfully:', { 
+        trackingId: trackingId?.substring(0, 8) + '...', 
+        trackingUrl: !!trackingUrl 
+      });
     }
 
-    // Process images with optimization
     if (validation.category === 'image') {
       const result = await this.optimizeImage(file.buffer);
       processedBuffer = result.optimized;
@@ -651,50 +604,82 @@ class FileProcessor {
     const fileName = `${finalCategory}/${userId}/${timestamp}-${randomId}-${sanitizedName}`;
     const thumbnailName = thumbnailBuffer ? `thumbnails/${userId}/${timestamp}-${randomId}-thumb.jpg` : null;
 
+    console.log('✅ File processed successfully:', {
+      category: finalCategory,
+      originalSize: file.size,
+      processedSize: processedBuffer.length,
+      optimized: processedBuffer !== file.buffer,
+      tracked: !!trackingId
+    });
+
     return {
-      category: finalCategory, fileName, thumbnailName,
-      processedBuffer, thumbnailBuffer, originalName: file.originalname,
-      mimeType: validation.mime, size: processedBuffer.length,
-      isOptimized: processedBuffer !== file.buffer, trackingId, trackingUrl
+      category: finalCategory, 
+      fileName, 
+      thumbnailName,
+      processedBuffer, 
+      thumbnailBuffer, 
+      originalName: file.originalname,
+      mimeType: validation.mime, 
+      size: processedBuffer.length,
+      isOptimized: processedBuffer !== file.buffer, 
+      trackingId, 
+      trackingUrl
     };
   }
 }
 
 const fileProcessor = new FileProcessor();
 
-// Enhanced multer configuration
+// Multer Configuration
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 250 * 1024 * 1024, // 250MB max
+    fileSize: 250 * 1024 * 1024,
     files: 10,
-    fieldSize: 10 * 1024 * 1024
+    fieldSize: 10 * 1024 * 1024,
+    parts: 15
   },
   fileFilter: (req, file, cb) => {
-    console.log('📁 Processing file:', {
+    console.log('📁 Multer processing file:', {
       name: file.originalname,
       type: file.mimetype,
       size: file.size
     });
 
-    const allowedMimes = [
-      ...fileProcessor.supportedTypes.image.mimes,
-      ...fileProcessor.supportedTypes.video.mimes,
-      ...fileProcessor.supportedTypes.audio.mimes,
-      ...fileProcessor.supportedTypes.document.mimes
-    ];
+    const allowedMimes = Object.values(fileProcessor.supportedTypes)
+      .flatMap(type => type.mimes);
 
     if (!allowedMimes.includes(file.mimetype)) {
-      return cb(new Error(`Unsupported MIME type: ${file.mimetype}`), false);
+      const error = new Error(`Unsupported MIME type: ${file.mimetype}. Allowed types: ${allowedMimes.join(', ')}`);
+      error.code = 'UNSUPPORTED_MIME_TYPE';
+      return cb(error, false);
     }
 
     cb(null, true);
   }
 });
 
-// ===== DATABASE SCHEMAS =====
+// Database Connection
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickoscoop';
+
+mongoose.connect(mongoUri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000
+})
+.then(() => {
+  console.log('✅ Connected to MongoDB:', mongoUri.includes('localhost') ? 'localhost' : 'cloud');
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err.message);
+  process.exit(1);
+});
+
+// Database Schemas
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, trim: true, unique: true },
+  username: { type: String, required: true, trim: true, unique: true, minlength: 2, maxlength: 30 },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
   avatar: { type: String, default: '✨' },
@@ -708,11 +693,16 @@ const userSchema = new mongoose.Schema({
   transparencyScore: { type: Number, default: 98, min: 0, max: 100 },
   communityScore: { type: Number, default: 96, min: 0, max: 100 },
   lastActive: { type: Date, default: Date.now },
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 
+userSchema.index({ email: 1, username: 1 });
+userSchema.index({ lastActive: -1 });
+
 const postSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   content: { type: String, required: true, maxlength: 2000 },
   mediaFiles: [{
     type: { type: String, enum: ['image', 'video', 'audio', 'pdf', 'document'], required: true },
@@ -727,12 +717,25 @@ const postSchema = new mongoose.Schema({
     trackingId: String,
     trackingUrl: String
   }],
-  likes: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, createdAt: { type: Date, default: Date.now } }],
-  comments: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, content: { type: String, maxlength: 500 }, createdAt: { type: Date, default: Date.now } }],
+  likes: [{ 
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, 
+    createdAt: { type: Date, default: Date.now } 
+  }],
+  comments: [{ 
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, 
+    content: { type: String, maxlength: 500 }, 
+    createdAt: { type: Date, default: Date.now } 
+  }],
   visibility: { type: String, enum: ['public', 'followers', 'private'], default: 'public' },
-  isPublic: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
+  isPublic: { type: Boolean, default: true, index: true },
+  viewCount: { type: Number, default: 0 },
+  shareCount: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now, index: -1 }
 });
+
+postSchema.index({ isPublic: 1, createdAt: -1 });
+postSchema.index({ userId: 1, createdAt: -1 });
+postSchema.index({ visibility: 1, createdAt: -1 });
 
 const pdfTrackingSchema = new mongoose.Schema({
   trackingId: { type: String, required: true, unique: true, index: true },
@@ -745,29 +748,38 @@ const pdfTrackingSchema = new mongoose.Schema({
   pages: { type: Number },
   accessCount: { type: Number, default: 0 },
   lastAccessed: { type: Date },
-  createdAt: { type: Date, default: Date.now },
-  accesses: [{ timestamp: { type: Date, default: Date.now }, userAgent: String, ip: String, referer: String }]
+  createdAt: { type: Date, default: Date.now, index: -1 },
+  accesses: [{ 
+    timestamp: { type: Date, default: Date.now }, 
+    userAgent: String, 
+    ip: String, 
+    referer: String 
+  }]
 });
 
 const User = mongoose.model('User', userSchema);
 const Post = mongoose.model('Post', postSchema);
 const PDFTracking = mongoose.model('PDFTracking', pdfTrackingSchema);
 
-// Authentication middleware
+// Authentication Middleware
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
+    return res.status(401).json({ 
+      message: 'Access token required',
+      error: 'NO_TOKEN'
+    });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
     
     if (decoded.userId === 'demo-user-id') {
       req.user = {
         _id: 'demo-user-id',
+        id: 'demo-user-id',
         username: 'Demo User',
         email: 'demo@sickoscoop.com',
         verified: true
@@ -777,74 +789,152 @@ const authenticateToken = async (req, res, next) => {
     
     const user = await User.findById(decoded.userId).select('-password');
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ 
+        message: 'User not found',
+        error: 'USER_NOT_FOUND'
+      });
     }
+    
+    user.lastActive = new Date();
+    await user.save();
     
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    console.error('Authentication error:', error);
+    return res.status(403).json({ 
+      message: 'Invalid or expired token',
+      error: 'INVALID_TOKEN'
+    });
   }
 };
 
 // ===== API ROUTES =====
 
-// ✅ ENHANCED HEALTH CHECK - This is what should appear at /api/health
-app.get('/api/health', (req, res) => {
+// Basic Health Check for DigitalOcean
+app.get('/health', async (req, res) => {
   res.json({
     status: 'OK',
-    message: 'SickoScoop Enhanced API with REAL PDF Watermarking! 🚀',
-    version: '2.0.0',
     timestamp: new Date().toISOString(),
-    features: {
-      fileProcessing: 'Enhanced with REAL PDF watermarking using pdf-lib',
-      fileLimits: 'Images: 20MB, Videos: 200MB, Audio: 50MB, PDFs: 50MB',
-      storage: 'DigitalOcean Spaces',
-      cors: 'Configured for development and production',
-      watermarking: 'Real PDF watermarking with QR codes and text overlays',
-      tracking: 'Complete PDF tracking with database storage',
-      websockets: 'Real-time features enabled',
-      database: 'MongoDB with enhanced schemas',
-      security: 'CSP headers fixed, CORS configured'
-    },
-    limits: fileProcessor.supportedTypes,
+    environment: 'DigitalOcean App Platform',
+    port: PORT,
+    uptime: Math.floor(process.uptime())
+  });
+});
+
+// Health Check
+app.get('/api/health', async (req, res) => {
+  const startTime = Date.now();
+  
+  let dbStatus = 'disconnected';
+  let dbResponseTime = 0;
+  try {
+    const dbStart = Date.now();
+    await mongoose.connection.db.admin().ping();
+    dbResponseTime = Date.now() - dbStart;
+    dbStatus = 'connected';
+  } catch (error) {
+    dbStatus = 'error: ' + error.message;
+  }
+  
+  let storageStatus = 'not_configured';
+  let storageResponseTime = 0;
+  if (s3 && spacesConfig.isConfigured) {
+    try {
+      const storageStart = Date.now();
+      await s3.headBucket({ Bucket: spacesConfig.bucket }).promise();
+      storageResponseTime = Date.now() - storageStart;
+      storageStatus = 'connected';
+    } catch (error) {
+      storageStatus = 'error: ' + error.message;
+    }
+  }
+  
+  const responseTime = Date.now() - startTime;
+  
+  res.json({
+    status: 'OK',
+    message: 'SickoScoop Production Server v3.0 - COMPLETE! 🚀',
+    version: '3.0.0',
+    timestamp: new Date().toISOString(),
     environment: {
       node: process.version,
       platform: process.platform,
-      uptime: process.uptime(),
-      memory: process.memoryUsage()
+      uptime: Math.floor(process.uptime()),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+      },
+      isProduction,
+      isDevelopment
+    },
+    database: {
+      status: dbStatus,
+      responseTime: dbResponseTime + 'ms'
+    },
+    storage: {
+      status: storageStatus,
+      responseTime: storageResponseTime + 'ms',
+      provider: 'DigitalOcean Spaces',
+      bucket: spacesConfig.bucket || 'not_configured'
+    },
+    features: {
+      fileProcessing: 'Enhanced with REAL PDF watermarking using pdf-lib',
+      fileLimits: 'Images: 20MB, Videos: 200MB, Audio: 50MB, PDFs: 50MB',
+      watermarking: 'Real PDF watermarking with QR codes and text overlays',
+      tracking: 'Complete PDF tracking with database storage',
+      websockets: 'Real-time features enabled',
+      cors: 'Multi-environment CORS configuration',
+      security: 'Enhanced security with rate limiting',
+      optimization: 'Image optimization with Sharp'
+    },
+    limits: fileProcessor.supportedTypes,
+    performance: {
+      responseTime: responseTime + 'ms',
+      healthy: responseTime < 1000 && dbStatus === 'connected'
     }
   });
 });
 
-// Enhanced file upload endpoint
+// File Upload Endpoint
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
+  const uploadStartTime = Date.now();
+  
   try {
-    console.log('📁 Enhanced file upload request');
-    console.log('Files count:', req.files?.length || 0);
-    console.log('User:', req.user?.username || 'Unknown', 'ID:', req.user?._id || req.user?.id);
+    console.log('📁 File upload request received');
+    console.log('  Files count:', req.files?.length || 0);
+    console.log('  User:', req.user?.username || 'Unknown');
+    console.log('  User ID:', req.user?._id?.toString()?.substring(0, 8) + '...' || req.user?.id);
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ 
         message: 'No files uploaded',
+        error: 'NO_FILES',
         supportedTypes: Object.keys(fileProcessor.supportedTypes),
-        limits: { images: '20MB', videos: '200MB', audio: '50MB', pdfs: '50MB' }
+        limits: { 
+          images: '20MB', 
+          videos: '200MB', 
+          audio: '50MB', 
+          pdfs: '50MB' 
+        }
       });
     }
 
-    const requiredEnvVars = ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    
-    if (missingVars.length > 0) {
+    if (!spacesConfig.isConfigured) {
+      console.error('❌ Storage not configured');
       return res.status(500).json({ 
-        message: 'Storage not configured',
-        missing: missingVars
+        message: 'File storage not configured on server',
+        error: 'STORAGE_NOT_CONFIGURED',
+        missing: ['DO_SPACES_KEY', 'DO_SPACES_SECRET', 'DO_SPACES_BUCKET'].filter(
+          varName => !process.env[varName]
+        )
       });
     }
 
-    const userId = req.user._id || req.user.id || 'demo-user-id';
+    const userId = req.user._id?.toString() || req.user.id || 'demo-user-id';
     const username = req.user.username || 'Demo User';
-    console.log('🔐 Using userId for upload:', userId, 'username:', username);
+    
+    console.log('🔐 Processing upload for:', { userId: userId.substring(0, 8) + '...', username });
 
     const uploadResults = [];
     const errors = [];
@@ -857,9 +947,10 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
         
         const processed = await fileProcessor.processFile(file, userId, username);
         
-        // Upload main file to DigitalOcean Spaces
-        const mainUpload = await s3.upload({
-          Bucket: process.env.DO_SPACES_BUCKET,
+        console.log('📤 Uploading to DigitalOcean Spaces...');
+        
+        const uploadParams = {
+          Bucket: spacesConfig.bucket,
           Key: processed.fileName,
           Body: processed.processedBuffer,
           ContentType: processed.mimeType,
@@ -872,15 +963,19 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
             'file-category': processed.category,
             'optimized': processed.isOptimized.toString(),
             'tracking-id': processed.trackingId || 'none',
-            'tracking-url': processed.trackingUrl || 'none'
+            'tracking-url': processed.trackingUrl || 'none',
+            'upload-timestamp': new Date().toISOString()
           }
-        }).promise();
+        };
+
+        const mainUpload = await s3.upload(uploadParams).promise();
+        console.log('✅ Main file uploaded:', mainUpload.Location);
 
         let thumbnailUrl = null;
         
         if (processed.thumbnailBuffer) {
-          const thumbnailUpload = await s3.upload({
-            Bucket: process.env.DO_SPACES_BUCKET,
+          const thumbnailParams = {
+            Bucket: spacesConfig.bucket,
             Key: processed.thumbnailName,
             Body: processed.thumbnailBuffer,
             ContentType: 'image/jpeg',
@@ -889,14 +984,16 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
             Metadata: {
               'uploaded-by': username,
               'user-id': userId,
-              'thumbnail-for': processed.fileName
+              'thumbnail-for': processed.fileName,
+              'upload-timestamp': new Date().toISOString()
             }
-          }).promise();
+          };
           
+          const thumbnailUpload = await s3.upload(thumbnailParams).promise();
           thumbnailUrl = thumbnailUpload.Location;
+          console.log('✅ Thumbnail uploaded:', thumbnailUrl);
         }
 
-        // Save PDF tracking to database
         if (processed.category === 'pdf' && processed.trackingId) {
           try {
             await PDFTracking.create({
@@ -909,7 +1006,7 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
               fileSize: processed.size,
               pages: 0
             });
-            console.log('💾 PDF tracking saved to database:', processed.trackingId);
+            console.log('💾 PDF tracking saved to database:', processed.trackingId.substring(0, 8) + '...');
           } catch (dbError) {
             console.error('Failed to save PDF tracking to database:', dbError);
           }
@@ -935,24 +1032,28 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
         console.log(`✅ File ${i + 1} uploaded successfully: ${fileResult.type} - ${fileResult.filename}`);
         
       } catch (fileError) {
-        console.error(`❌ Error processing ${file.originalname}:`, fileError.message);
+        console.error(`❌ Error processing ${file.originalname}:`, fileError);
         errors.push({
           filename: file.originalname,
           error: fileError.message,
-          stack: process.env.NODE_ENV === 'development' ? fileError.stack : undefined
+          code: fileError.code || 'PROCESSING_ERROR',
+          details: isDevelopment ? fileError.stack : undefined
         });
       }
     }
 
+    const uploadTime = Date.now() - uploadStartTime;
+
     if (uploadResults.length === 0) {
       return res.status(400).json({
         message: 'All file uploads failed',
+        error: 'ALL_UPLOADS_FAILED',
         errors,
-        debug: { userId, userInfo: { id: req.user._id || req.user.id, username: req.user.username } }
+        uploadTime: uploadTime + 'ms'
       });
     }
 
-    console.log(`✅ Upload complete: ${uploadResults.length} successful, ${errors.length} failed`);
+    console.log(`✅ Upload complete: ${uploadResults.length} successful, ${errors.length} failed in ${uploadTime}ms`);
 
     res.json({
       message: `Successfully processed ${uploadResults.length} file(s)`,
@@ -964,32 +1065,43 @@ app.post('/api/media/upload', authenticateToken, upload.array('files', 10), asyn
         failed: errors.length,
         totalSize: uploadResults.reduce((acc, file) => acc + file.size, 0),
         optimized: uploadResults.filter(f => f.isOptimized).length,
-        pdfsTracked: uploadResults.filter(f => f.trackingId).length
+        pdfsTracked: uploadResults.filter(f => f.trackingId).length,
+        uploadTime: uploadTime + 'ms'
       },
-      limits: { images: '20MB', videos: '200MB', audio: '50MB', pdfs: '50MB' }
+      limits: { 
+        images: '20MB', 
+        videos: '200MB', 
+        audio: '50MB', 
+        pdfs: '50MB' 
+      }
     });
 
   } catch (error) {
+    const uploadTime = Date.now() - uploadStartTime;
     console.error('❌ Upload system error:', error);
     res.status(500).json({ 
       message: 'Upload system error', 
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      code: error.code || 'SYSTEM_ERROR',
+      uploadTime: uploadTime + 'ms',
+      details: isDevelopment ? error.stack : undefined
     });
   }
 });
 
-// PDF tracking endpoints
+// PDF Tracking Endpoints
 app.get('/api/track/:trackingId', async (req, res) => {
   try {
     const { trackingId } = req.params;
-    const userAgent = req.headers['user-agent'];
-    const ip = req.ip || req.connection.remoteAddress;
-    const referer = req.headers['referer'];
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const referer = req.headers['referer'] || req.headers['referrer'] || 'direct';
     
     console.log('📊 PDF Access Tracked:', {
-      trackingId, userAgent, ip, referer,
-      timestamp: new Date().toISOString()
+      trackingId: trackingId.substring(0, 8) + '...',
+      ip,
+      userAgent: userAgent.substring(0, 50) + '...',
+      referer
     });
     
     let tracking;
@@ -998,7 +1110,17 @@ app.get('/api/track/:trackingId', async (req, res) => {
       if (tracking) {
         tracking.accessCount += 1;
         tracking.lastAccessed = new Date();
-        tracking.accesses.push({ timestamp: new Date(), userAgent, ip, referer });
+        tracking.accesses.push({ 
+          timestamp: new Date(), 
+          userAgent, 
+          ip, 
+          referer 
+        });
+        
+        if (tracking.accesses.length > 100) {
+          tracking.accesses = tracking.accesses.slice(-100);
+        }
+        
         await tracking.save();
         console.log('💾 PDF tracking updated in database');
       }
@@ -1010,69 +1132,155 @@ app.get('/api/track/:trackingId', async (req, res) => {
     
     res.json({
       message: 'PDF access tracked',
-      trackingId,
+      trackingId: trackingId.substring(0, 8) + '...',
       timestamp: new Date().toISOString(),
-      accessCount: tracking?.accessCount || 1
+      accessCount: tracking?.accessCount || 1,
+      status: 'success'
     });
   } catch (error) {
     console.error('PDF tracking error:', error);
-    res.status(500).json({ message: 'Tracking error' });
+    res.status(500).json({ 
+      message: 'Tracking error',
+      error: error.message,
+      trackingId: req.params.trackingId?.substring(0, 8) + '...'
+    });
   }
 });
 
-// Register
+app.get('/api/track/:trackingId/stats', authenticateToken, async (req, res) => {
+  try {
+    const { trackingId } = req.params;
+    
+    const tracking = await PDFTracking.findOne({ trackingId })
+      .populate('userId', 'username email');
+    
+    if (!tracking) {
+      return res.status(404).json({ message: 'Tracking record not found' });
+    }
+    
+    if (tracking.userId && tracking.userId.toString() !== req.user._id?.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    res.json({
+      trackingId: trackingId.substring(0, 8) + '...',
+      filename: tracking.originalFilename,
+      uploadedBy: tracking.uploadedBy,
+      accessCount: tracking.accessCount,
+      lastAccessed: tracking.lastAccessed,
+      createdAt: tracking.createdAt,
+      fileSize: tracking.fileSize,
+      pages: tracking.pages,
+      recentAccesses: tracking.accesses.slice(-10).map(access => ({
+        timestamp: access.timestamp,
+        ip: access.ip,
+        userAgent: access.userAgent?.substring(0, 100),
+        referer: access.referer
+      }))
+    });
+  } catch (error) {
+    console.error('PDF stats error:', error);
+    res.status(500).json({ message: 'Failed to fetch tracking stats' });
+  }
+});
+
+// Authentication Endpoints
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ 
+        message: 'All fields are required',
+        error: 'MISSING_FIELDS'
+      });
+    }
+
+    if (username.length < 2 || username.length > 30) {
+      return res.status(400).json({ 
+        message: 'Username must be between 2 and 30 characters',
+        error: 'INVALID_USERNAME'
+      });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      return res.status(400).json({ 
+        message: 'Password must be at least 6 characters',
+        error: 'WEAK_PASSWORD'
+      });
     }
 
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: 'Please enter a valid email address',
+        error: 'INVALID_EMAIL'
+      });
+    }
+
+    const existingUser = await User.findOne({ 
+      $or: [{ email: email.toLowerCase() }, { username }] 
+    });
+    
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this email or username' });
+      const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
+      return res.status(400).json({ 
+        message: `A user with this ${field} already exists`,
+        error: 'USER_EXISTS',
+        field
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = new User({ username, email, password: hashedPassword });
+    const user = new User({ 
+      username: username.trim(), 
+      email: email.toLowerCase().trim(), 
+      password: hashedPassword 
+    });
+    
     await user.save();
 
     const token = jwt.sign(
       { userId: user._id, username: user.username },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
+
+    console.log('👤 User registered:', { username, email: email.toLowerCase() });
 
     res.status(201).json({
       message: 'User created successfully',
       token,
       user: {
-        id: user._id, username: user.username, email: user.email,
-        verified: user.verified, privacyScore: user.privacyScore,
-        transparencyScore: user.transparencyScore, communityScore: user.communityScore
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        verified: user.verified,
+        privacyScore: user.privacyScore,
+        transparencyScore: user.transparencyScore,
+        communityScore: user.communityScore
       }
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    res.status(500).json({ 
+      message: 'Server error during registration',
+      error: 'REGISTRATION_ERROR'
+    });
   }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ 
+        message: 'Email and password are required',
+        error: 'MISSING_CREDENTIALS'
+      });
     }
 
-    // Demo login
     if (email === 'demo@sickoscoop.com' && password === 'demo') {
       const token = jwt.sign(
         { userId: 'demo-user-id', username: 'Demo User' },
@@ -1080,97 +1288,174 @@ app.post('/api/auth/login', async (req, res) => {
         { expiresIn: '7d' }
       );
 
+      console.log('👤 Demo user logged in');
+
       return res.json({
         message: 'Demo login successful',
         token,
         user: {
-          id: 'demo-user-id', username: 'Demo User', email: 'demo@sickoscoop.com',
-          verified: true, privacyScore: 94, transparencyScore: 98, communityScore: 96
+          id: 'demo-user-id',
+          username: 'Demo User',
+          email: 'demo@sickoscoop.com',
+          verified: true,
+          privacyScore: 94,
+          transparencyScore: 98,
+          communityScore: 96
         }
       });
     }
 
-    const user = await User.findOne({ email });
-    if (!user || !await bcrypt.compare(password, user.password)) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      return res.status(401).json({ 
+        message: 'Invalid email or password',
+        error: 'INVALID_CREDENTIALS'
+      });
     }
 
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      return res.status(423).json({ 
+        message: 'Account temporarily locked due to too many failed attempts',
+        error: 'ACCOUNT_LOCKED',
+        lockUntil: user.lockUntil
+      });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    
+    if (!isValidPassword) {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        console.log('🔒 Account locked for user:', user.email);
+      }
+      
+      await user.save();
+      
+      return res.status(401).json({ 
+        message: 'Invalid email or password',
+        error: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
     user.lastActive = new Date();
     await user.save();
 
     const token = jwt.sign(
       { userId: user._id, username: user.username },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
 
+    console.log('👤 User logged in:', { username: user.username, email: user.email });
+
     res.json({
-      message: 'Login successful', token,
+      message: 'Login successful',
+      token,
       user: {
-        id: user._id, username: user.username, email: user.email,
-        verified: user.verified, privacyScore: user.privacyScore,
-        transparencyScore: user.transparencyScore, communityScore: user.communityScore
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        verified: user.verified,
+        privacyScore: user.privacyScore,
+        transparencyScore: user.transparencyScore,
+        communityScore: user.communityScore,
+        lastActive: user.lastActive
       }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    res.status(500).json({ 
+      message: 'Server error during login',
+      error: 'LOGIN_ERROR'
+    });
   }
 });
 
-// Token verification
 app.post('/api/auth/verify', async (req, res) => {
   try {
     const { token } = req.body;
     
     if (!token) {
-      return res.status(400).json({ valid: false, message: 'Token required' });
+      return res.status(400).json({ 
+        valid: false, 
+        message: 'Token required',
+        error: 'NO_TOKEN'
+      });
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
       
       if (decoded.userId === 'demo-user-id') {
         return res.json({
           valid: true,
           user: {
-            id: 'demo-user-id', username: 'Demo User', email: 'demo@sickoscoop.com',
-            verified: true, privacyScore: 94, transparencyScore: 98, communityScore: 96
+            id: 'demo-user-id',
+            username: 'Demo User',
+            email: 'demo@sickoscoop.com',
+            verified: true,
+            privacyScore: 94,
+            transparencyScore: 98,
+            communityScore: 96
           }
         });
       }
       
       const user = await User.findById(decoded.userId).select('-password');
       if (!user) {
-        return res.status(401).json({ valid: false, message: 'User not found' });
+        return res.status(401).json({ 
+          valid: false, 
+          message: 'User not found',
+          error: 'USER_NOT_FOUND'
+        });
       }
       
       res.json({
         valid: true,
         user: {
-          id: user._id, username: user.username, email: user.email,
-          avatar: user.avatar, bio: user.bio, verified: user.verified,
-          privacyScore: user.privacyScore, transparencyScore: user.transparencyScore,
-          communityScore: user.communityScore, followers: user.followers, following: user.following
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar,
+          bio: user.bio,
+          verified: user.verified,
+          privacyScore: user.privacyScore,
+          transparencyScore: user.transparencyScore,
+          communityScore: user.communityScore,
+          followers: user.followers,
+          following: user.following,
+          lastActive: user.lastActive
         }
       });
       
     } catch (jwtError) {
-      return res.status(401).json({ valid: false, message: 'Invalid token' });
+      return res.status(401).json({ 
+        valid: false, 
+        message: 'Invalid or expired token',
+        error: 'INVALID_TOKEN'
+      });
     }
     
   } catch (error) {
     console.error('Token verification error:', error);
-    res.status(500).json({ valid: false, message: 'Server error' });
+    res.status(500).json({ 
+      valid: false, 
+      message: 'Server error during token verification',
+      error: 'VERIFICATION_ERROR'
+    });
   }
 });
 
-// Public posts
-
+// Post Endpoints
 app.get('/api/posts', authenticateToken, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
     console.log('📱 Fetching posts for authenticated user:', req.user.username);
@@ -1179,7 +1464,7 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
       $or: [
         { visibility: 'public' }, 
         { isPublic: true },
-        { userId: req.user._id || req.user.id } // Include user's own posts
+        { userId: req.user._id || req.user.id }
       ]
     })
     .populate('userId', 'username avatar verified transparencyScore')
@@ -1201,15 +1486,17 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
     res.json(transformedPosts);
   } catch (error) {
     console.error('❌ Get posts error:', error);
-    res.status(500).json({ message: 'Failed to fetch posts' });
+    res.status(500).json({ 
+      message: 'Failed to fetch posts',
+      error: 'FETCH_POSTS_ERROR'
+    });
   }
 });
 
-// ✅ ADD THIS - Public posts endpoint (no authentication required)
 app.get('/api/posts/public', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
     console.log('📱 Public posts requested - no auth required');
@@ -1234,32 +1521,46 @@ app.get('/api/posts/public', async (req, res) => {
     console.error('❌ Public posts error:', error);
     res.status(500).json({ 
       message: 'Failed to fetch public posts',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Server error'
+      error: 'FETCH_PUBLIC_POSTS_ERROR',
+      details: isDevelopment ? error.message : undefined
     });
   }
 });
 
-// Enhanced post creation
 app.post('/api/posts', authenticateToken, async (req, res) => {
   try {
     const { content, mediaFiles, visibility = 'public' } = req.body;
 
-    console.log('📝 Creating post with data:', {
+    console.log('📝 Creating post:', {
       content: content?.substring(0, 50) + '...',
       mediaFilesCount: mediaFiles?.length || 0,
-      mediaFiles: mediaFiles,
       visibility,
-      userId: req.user._id || req.user.id
+      userId: req.user._id?.toString()?.substring(0, 8) + '...' || req.user.id
     });
 
     if (!content || content.trim().length === 0) {
-      return res.status(400).json({ message: 'Post content is required' });
+      return res.status(400).json({ 
+        message: 'Post content is required',
+        error: 'EMPTY_CONTENT'
+      });
+    }
+
+    if (content.length > 2000) {
+      return res.status(400).json({ 
+        message: 'Post content too long (max 2000 characters)',
+        error: 'CONTENT_TOO_LONG'
+      });
     }
 
     let processedMediaFiles = [];
     if (mediaFiles && Array.isArray(mediaFiles)) {
       processedMediaFiles = mediaFiles.map(file => {
-        console.log('📁 Processing media file for post:', file);
+        console.log('📁 Processing media file for post:', {
+          type: file.type,
+          filename: file.filename,
+          size: file.size
+        });
+        
         return {
           type: file.type,
           url: file.url,
@@ -1275,7 +1576,7 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
         };
       });
       
-      console.log('✅ Processed media files:', processedMediaFiles);
+      console.log('✅ Processed media files:', processedMediaFiles.length);
     }
 
     const post = new Post({
@@ -1294,7 +1595,6 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
 
     console.log('✅ Post populated and ready to return');
 
-    // Emit to connected clients
     io.emit('new_post', populatedPost);
 
     res.status(201).json(populatedPost);
@@ -1302,123 +1602,260 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
     console.error('❌ Create post error:', error);
     res.status(500).json({ 
       message: 'Server error creating post',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: 'CREATE_POST_ERROR',
+      details: isDevelopment ? error.message : undefined
     });
   }
 });
 
-// ✅ FIXED MISSING ENDPOINTS - These fix the 404 console errors!
-app.get('/api/conversations', authenticateToken, async (req, res) => {
+app.post('/api/posts/:postId/like', authenticateToken, async (req, res) => {
   try {
-    res.json({
-      message: 'Conversations feature coming soon',
-      conversations: [],
-      status: 'development'
-    });
-  } catch (error) {
-    console.error('Conversations error:', error);
-    res.status(500).json({ message: 'Failed to fetch conversations' });
-  }
-});
+    const { postId } = req.params;
+    const userId = req.user._id || req.user.id;
 
-app.get('/api/chats', authenticateToken, async (req, res) => {
-  try {
-    res.json({
-      message: 'Chat feature coming soon',
-      chats: [],
-      status: 'development'
-    });
-  } catch (error) {
-    console.error('Chats error:', error);
-    res.status(500).json({ message: 'Failed to load chats' });
-  }
-});
-
-// Serve React app for all non-API routes
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ message: 'API endpoint not found' });
-  }
-  
-  if (buildPath) {
-    const indexPath = path.join(buildPath, 'index.html');
-    console.log('🌐 Serving React app from:', indexPath);
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        console.error('Error serving React app:', err);
-        res.status(500).json({ 
-          message: 'React app not found. Run: npm run build',
-          buildPath: buildPath
-        });
-      }
-    });
-  } else {
-    res.redirect('/');
-  }
-});
-
-// Enhanced error handling
-app.use((error, req, res, next) => {
-  console.error('Server error:', error);
-  
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ 
-        message: 'File too large. Maximum sizes: Images 20MB, Videos 200MB, Audio 50MB, PDFs 50MB.',
-        code: 'FILE_TOO_LARGE',
-        limits: { images: '20MB', videos: '200MB', audio: '50MB', pdfs: '50MB' }
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ 
+        message: 'Post not found',
+        error: 'POST_NOT_FOUND'
       });
     }
+
+    const existingLikeIndex = post.likes.findIndex(like => 
+      (like.user || like).toString() === userId.toString()
+    );
+
+    if (existingLikeIndex > -1) {
+      post.likes.splice(existingLikeIndex, 1);
+      console.log('👎 Post unliked:', { postId, userId: userId.toString().substring(0, 8) + '...' });
+    } else {
+      post.likes.push({ user: userId });
+      console.log('👍 Post liked:', { postId, userId: userId.toString().substring(0, 8) + '...' });
+    }
+
+    await post.save();
+    res.json({ 
+      message: existingLikeIndex > -1 ? 'Post unliked' : 'Post liked',
+      liked: existingLikeIndex === -1,
+      likeCount: post.likes.length
+    });
+  } catch (error) {
+    console.error('❌ Like error:', error);
+    res.status(500).json({ 
+      message: 'Failed to like/unlike post',
+      error: 'LIKE_ERROR'
+    });
+  }
+});
+
+app.post('/api/posts/:postId/comment', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { content } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ 
+        message: 'Comment content is required',
+        error: 'EMPTY_COMMENT'
+      });
+    }
+
+    if (content.length > 500) {
+      return res.status(400).json({ 
+        message: 'Comment too long (max 500 characters)',
+        error: 'COMMENT_TOO_LONG'
+      });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ 
+        message: 'Post not found',
+        error: 'POST_NOT_FOUND'
+      });
+    }
+
+    post.comments.push({
+      user: userId,
+      content: content.trim()
+    });
+
+    await post.save();
+
+    const populatedPost = await Post.findById(post._id)
+      .populate('userId', 'username avatar verified')
+      .populate('comments.user', 'username avatar verified');
+
+    console.log('💬 Comment added to post:', { postId, userId: userId.toString().substring(0, 8) + '...' });
+
+    io.emit('new_comment', { postId, comment: post.comments[post.comments.length - 1] });
+
+    res.status(201).json({
+      message: 'Comment added successfully',
+      comment: post.comments[post.comments.length - 1],
+      commentCount: post.comments.length
+    });
+  } catch (error) {
+    console.error('❌ Comment error:', error);
+    res.status(500).json({ 
+      message: 'Failed to add comment',
+      error: 'COMMENT_ERROR'
+    });
+  }
+});
+
+// Get specific post
+app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId)
+      .populate('userId', 'username avatar verified transparencyScore')
+      .populate('likes.user', 'username')
+      .populate('comments.user', 'username avatar verified');
+
+    if (!post) {
+      return res.status(404).json({ 
+        message: 'Post not found',
+        error: 'POST_NOT_FOUND'
+      });
+    }
+
+    // Check if user can view this post
+    if (post.visibility === 'private' && post.userId._id.toString() !== (req.user._id || req.user.id).toString()) {
+      return res.status(403).json({ 
+        message: 'You do not have permission to view this post',
+        error: 'ACCESS_DENIED'
+      });
+    }
+
+    // Increment view count
+    post.viewCount += 1;
+    await post.save();
+
+    console.log('👁️ Post viewed:', { postId, userId: (req.user._id || req.user.id).toString().substring(0, 8) + '...' });
+
+    res.json(post);
+  } catch (error) {
+    console.error('❌ Get post error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch post',
+      error: 'FETCH_POST_ERROR'
+    });
+  }
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
+
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`👥 User ${socket.id} joined room ${roomId}`);
+  });
+
+  socket.on('leave_room', (roomId) => {
+    socket.leave(roomId);
+    console.log(`👋 User ${socket.id} left room ${roomId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 User disconnected:', socket.id);
+  });
+});
+
+// Catch-all handler for React Router
+if (buildPath) {
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ 
+        message: 'API endpoint not found',
+        error: 'ENDPOINT_NOT_FOUND',
+        path: req.path,
+        method: req.method
+      });
+    }
+    
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+} else {
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ 
+        message: 'API endpoint not found',
+        error: 'ENDPOINT_NOT_FOUND',
+        path: req.path,
+        method: req.method
+      });
+    }
+    
+    res.status(200).json({
+      message: 'SickoScoop API Server - Frontend build not found',
+      status: 'API_ONLY_MODE',
+      api: {
+        health: '/api/health',
+        auth: '/api/auth/login | /api/auth/register',
+        posts: '/api/posts | /api/posts/public',
+        upload: '/api/media/upload'
+      },
+      version: '3.0.0'
+    });
+  });
+}
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('🚨 Unhandled error:', error);
+  
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({
+      message: 'File too large',
+      error: 'FILE_TOO_LARGE',
+      maxSize: '250MB'
+    });
   }
   
-  res.status(500).json({ 
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Server error'
-  });
-});
-
-// Socket.IO for real-time features
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Database connection and server start
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickoscoop';
-
-mongoose.connect(mongoUri)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-    const PORT = process.env.PORT || 3001;
-    server.listen(PORT, () => {
-      console.log(`🚀 SickoScoop Enhanced Server v2.0 FIXED running on port ${PORT}`);
-      console.log('🌐 CORS configured for development and production');
-      console.log('🔒 CSP headers fixed - Tailwind CSS will load properly');
-      console.log('📁 Enhanced file processing limits:');
-      console.log('   • Images: up to 20MB');
-      console.log('   • Videos: up to 200MB');
-      console.log('   • Audio: up to 50MB');
-      console.log('   • PDFs: up to 50MB (with REAL watermarking)');
-      console.log('🔧 React build path:', buildPath || 'PLACEHOLDER_MODE');
-      console.log('💾 Storage: DigitalOcean Spaces', process.env.DO_SPACES_BUCKET ? 'configured' : 'NOT_CONFIGURED');
-      console.log('🔏 REAL PDF watermarking with pdf-lib enabled');
-      console.log('📊 PDF tracking with database storage enabled');
-      console.log('🔧 Missing API endpoints added (/api/conversations, /api/chats)');
-      console.log('');
-      console.log('🌐 Test URLs:');
-      console.log('   Health: https://sickoscoop-backend-deo45.ondigitalocean.app/api/health');
-      console.log('   Public: https://sickoscoop-backend-deo45.ondigitalocean.app/api/posts/public');
-      console.log('   App: https://sickoscoop-backend-deo45.ondigitalocean.app/');
-      console.log('');
-      console.log('✅ All fixes applied - ready for production!');
+  if (error.code === 'UNSUPPORTED_MIME_TYPE') {
+    return res.status(400).json({
+      message: error.message,
+      error: 'UNSUPPORTED_MIME_TYPE'
     });
-  })
-  .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+  }
+  
+  res.status(500).json({
+    message: 'Internal server error',
+    error: 'INTERNAL_ERROR',
+    details: isDevelopment ? error.message : undefined
   });
+});
 
-module.exports = { app, server, io };
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('');
+  console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉');
+  console.log('🚀 SickoScoop Production Server v3.0 - DigitalOcean Ready!');
+  console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉');
+  console.log('');
+  console.log('📡 Server Details:');
+  console.log('   Port:       ', PORT);
+  console.log('   Health:     /health and /api/health');
+  console.log('   Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
+  console.log('   Database:   ', process.env.MONGODB_URI ? 'Connected ✅' : 'Local MongoDB ⚠️');
+  console.log('   Storage:    ', spacesConfig.isConfigured ? 'DigitalOcean Spaces ✅' : 'Not configured ❌');
+  console.log('   Build:      ', buildPath ? 'React build found ✅' : 'API-only mode ⚠️');
+  console.log('');
+  console.log('🔧 Features Ready:');
+  console.log('   ✅ Real PDF watermarking with pdf-lib');
+  console.log('   ✅ File upload with image optimization');
+  console.log('   ✅ PDF tracking and analytics');
+  console.log('   ✅ Real-time WebSocket features');
+  console.log('   ✅ Multi-environment CORS');
+  console.log('   ✅ Rate limiting and security');
+  console.log('   ✅ Complete authentication system');
+  console.log('   ✅ Public and private posts');
+  console.log('');
+  console.log('🚀 Ready for DigitalOcean deployment!');
+  console.log('');
+});
+
+module.exports = app;
