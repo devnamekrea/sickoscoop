@@ -1,7 +1,7 @@
 {
   "name": "sickoscoop",
-  "version": "1.0.0", 
-  "description": "SickoScoop - Social Media Platform for Genuine Communication",
+  "version": "1.0.0",
+  "description": "Revolutionary social media platform with anti-stalking protection",
   "main": "backend/enhanced-server.js",
   "engines": {
     "node": "18.x",
@@ -9,40 +9,27 @@
   },
   "scripts": {
     "start": "cd backend && node enhanced-server.js",
-    "dev": "cd backend && NODE_ENV=development node enhanced-server.js",
-    "build": "cd frontend && npm install && npm run build && cd .. && echo 'Build complete'",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ..",
-    "heroku-postbuild": "npm run build",
-    "postinstall": "cd backend && npm install",
-    "test": "echo 'No tests specified' && exit 0"
+    "build": "npm run install-all && npm run build-frontend",
+    "build-frontend": "cd frontend && npm install --production=false && npm run build && mv build ../backend/build",
+    "build-production": "npm run install-backend && npm run build-frontend",
+    "install-all": "npm run install-backend && npm run install-frontend",
+    "install-backend": "cd backend && npm install --production=false",
+    "install-frontend": "cd frontend && npm install --production=false",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "dev-backend": "cd backend && nodemon enhanced-server.js",
+    "dev-frontend": "cd frontend && npm start",
+    "clean": "rm -rf backend/node_modules frontend/node_modules backend/build frontend/build",
+    "test": "cd backend && npm test"
   },
-  "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.6.3",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "multer": "^1.4.5-lts.1",
-    "aws-sdk": "^2.1501.0",
-    "socket.io": "^4.7.4",
-    "compression": "^1.7.4",
-    "file-type": "^18.7.0",
-    "sharp": "^0.32.6",
-    "pdf-lib": "^1.17.1",
-    "qrcode": "^1.5.3",
-    "uuid": "^9.0.1",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
   },
-  "keywords": [
-    "social-media",
-    "nodejs", 
-    "express",
-    "react",
-    "mongodb",
-    "websocket"
-  ],
-  "author": "SickoScoop Team",
-  "license": "MIT"
+  "keywords": ["social-media", "privacy", "security", "react", "node"],
+  "author": "Your Name",
+  "license": "MIT",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
 }
