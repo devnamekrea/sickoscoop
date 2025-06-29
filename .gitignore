@@ -2,3 +2,15 @@ backend/.env
 frontend/.env
 *.env
 backend/
+.DS_Store
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.DS_Store
+.env
+.env.*
+*.env
+.env
