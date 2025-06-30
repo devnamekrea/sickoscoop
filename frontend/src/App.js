@@ -601,9 +601,113 @@ const LandingPage = React.memo(({
           </div>
         ))}
       </div>
+
+      {/* ✨ NEW: Copyright Notice */}
+      <div className="mt-16 pt-8 border-t border-slate-600/30 w-full max-w-4xl">
+        <div className="text-center">
+          <p className="text-slate-400 text-sm">
+            © 2025 SickoScoop. All rights reserved.
+          </p>
+          <p className="text-slate-500 text-xs mt-2">
+            Building genuine connections through transparency and safety.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 ));
+
+const SettingsModal = React.memo(({ isOpen, onClose, user }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-md w-full mx-4 max-h-96 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
+          <h3 className="text-xl font-semibold text-white">Settings & About</h3>
+          <button 
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-80">
+          <div className="space-y-6">
+            {/* User Info Section */}
+            {user && (
+              <div className="border-b border-slate-600/30 pb-4">
+                <h4 className="text-lg font-semibold text-white mb-3">Account</h4>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-amber-500/80">
+                    {user.username?.slice(0, 2).toUpperCase() || 'YU'}
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{user.username || 'Your Username'}</p>
+                    <p className="text-slate-400 text-sm">{user.email || 'your@email.com'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* About Section */}
+            <div className="border-b border-slate-600/30 pb-4">
+              <h4 className="text-lg font-semibold text-white mb-3">About SickoScoop</h4>
+              <p className="text-slate-300 text-sm mb-3">
+                SickoScoop is a social platform built for genuine communication and transparency. 
+                We believe in creating safe spaces where people can share without fear of stalking or harassment.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">Anti-Stalker Protection</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">PDF Watermarking & Tracking</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">Genuine Community Building</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy & Security */}
+            <div className="border-b border-slate-600/30 pb-4">
+              <h4 className="text-lg font-semibold text-white mb-3">Privacy & Security</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Privacy Score</span>
+                  <span className="text-green-400 text-sm font-semibold">{user?.privacyScore || 94}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Transparency</span>
+                  <span className="text-blue-400 text-sm font-semibold">{user?.transparencyScore || 98}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Community Score</span>
+                  <span className="text-purple-400 text-sm font-semibold">{user?.communityScore || 96}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center pt-2">
+              <p className="text-slate-400 text-sm font-medium">
+                © 2025 SickoScoop. All rights reserved.
+              </p>
+              <p className="text-slate-500 text-xs mt-1">
+                Version 3.0 • Building safer social connections
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 // Header component
 const Header = React.memo(({ 
@@ -614,7 +718,8 @@ const Header = React.memo(({
   user,
   selectedPost,
   onBackToFeed,
-  navigate
+  navigate,
+  onSettingsClick
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -736,9 +841,12 @@ const Header = React.memo(({
               </div>
             )}
 
-            <button className="p-2 text-slate-300 hover:text-white transition-colors duration-200 hover:bg-slate-800/50 rounded-lg mr-3">
-              <Settings className="h-5 w-5" />
-            </button>
+            <button 
+  className="p-2 text-slate-300 hover:text-white transition-colors duration-200 hover:bg-slate-800/50 rounded-lg mr-3" 
+  onClick={onSettingsClick}
+>
+  <Settings className="h-5 w-5" />
+</button>
             
             {user && (
               <button
@@ -2103,7 +2211,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [selectedPost, setSelectedPost] = useState(null);
   const [apiStatus, setApiStatus] = useState('checking');
-  
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   // Login/Register forms
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
@@ -2239,6 +2348,10 @@ export default function App() {
     navigate('/');
   };
 
+const handleSettingsClick = () => {
+  setShowSettingsModal(true);
+};
+
   const handlePost = async (uploadedFiles = []) => {
     if (!newPost.trim() && uploadedFiles.length === 0) return;
 
@@ -2352,6 +2465,7 @@ export default function App() {
             selectedPost={selectedPost}
             onBackToFeed={handleBackToFeed}
             navigate={navigate}
+            onSettingsClick={handleSettingsClick}
           />
 
           <main className="container mx-auto px-4 py-6 max-w-2xl">
@@ -2457,6 +2571,12 @@ export default function App() {
           </main>
         </>
       )}
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        user={user}
+      />
     </div>
   );
 }
