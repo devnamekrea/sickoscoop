@@ -1,41 +1,48 @@
 {
   "name": "sickoscoop-backend",
   "version": "1.0.0",
-  "description": "SickoScoop Backend Server",
+  "description": "SickoScoop Backend API Server",
   "main": "enhanced-server.js",
-  "engines": {
-    "node": "18.x",
-    "npm": "9.x"
-  },
   "scripts": {
     "start": "node enhanced-server.js",
     "dev": "nodemon enhanced-server.js",
-    "build": "echo 'Backend build complete'",
-    "test": "echo 'No tests specified'"
+    "build": "npm install --production=false",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.5.0",
+    "mongoose": "^7.0.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "express-rate-limit": "^6.10.0",
-    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.1.5",
     "multer": "^1.4.5-lts.1",
-    "aws-sdk": "^2.1441.0",
-    "socket.io": "^4.7.2",
+    "aws-sdk": "^2.1379.0",
+    "http": "^0.0.1-security",
+    "socket.io": "^4.6.2",
     "compression": "^1.7.4",
-    "file-type": "^18.5.0",
-    "sharp": "^0.32.5",
+    "file-type": "^18.3.0",
+    "sharp": "^0.32.1",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.3",
     "uuid": "^9.0.0",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+    "dotenv": "^16.0.3",
+    "path": "^0.12.7",
+    "fs": "^0.0.1-security"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^2.0.22"
   },
-  "keywords": ["api", "server", "social-media"],
-  "author": "Your Name",
+  "keywords": [
+    "social-media",
+    "privacy",
+    "transparency",
+    "community"
+  ],
+  "author": "SickoScoop Team",
   "license": "MIT"
 }
