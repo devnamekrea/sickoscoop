@@ -2,6 +2,171 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, Send, Image, Video, FileText, Mic, Search, Settings, X, MoreHorizontal, Flag, Bookmark, Eye, ArrowLeft, Clock, Users, Copy, ExternalLink, Twitter, Facebook, Linkedin, CheckCircle, AlertCircle } from 'lucide-react';
 
+// Sharp SickoScoop logo with purple gradient
+const SickoScoopLogo = ({ size = "default", className = "" }) => {
+  const dimensions = {
+    small: { width: 140, height: 36 },
+    default: { width: 200, height: 48 },
+    large: { width: 280, height: 64 }
+  };
+
+  const { width, height } = dimensions[size];
+  
+  return (
+    <svg 
+      width={width} 
+      height={height} 
+      viewBox="0 0 280 64" 
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="purpleTextGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#e879f9" />
+          <stop offset="25%" stopColor="#c084fc" />
+          <stop offset="50%" stopColor="#a78bfa" />
+          <stop offset="75%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+        
+        <filter id="textShadow">
+          <feDropShadow dx="0" dy="2" stdDeviation="1" floodColor="#1e1b4b" floodOpacity="0.3"/>
+        </filter>
+      </defs>
+      
+      <text 
+        x="140" 
+        y="42" 
+        fontSize="32" 
+        fontWeight="700" 
+        fill="url(#purpleTextGradient)"
+        fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        textAnchor="middle"
+        filter="url(#textShadow)"
+        style={{
+          letterSpacing: '-0.02em',
+          paintOrder: 'stroke fill'
+        }}
+      >
+        SickoScoop
+      </text>
+    </svg>
+  );
+}; // ← IMPORTANT: Semicolon here!
+
+// Clean SS logo for compact spaces  
+const SSLogo = ({ size = "default", className = "" }) => {
+  const dimensions = {
+    small: { width: 60, height: 36 },
+    default: { width: 80, height: 48 },
+    large: { width: 100, height: 64 }
+  };
+
+  const { width, height } = dimensions[size];
+  
+  return (
+    <svg 
+      width={width} 
+      height={height} 
+      viewBox="0 0 100 64" 
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="ssGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#e879f9" />
+          <stop offset="50%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+        
+        <filter id="ssTextShadow">
+          <feDropShadow dx="0" dy="2" stdDeviation="1" floodColor="#1e1b4b" floodOpacity="0.4"/>
+        </filter>
+      </defs>
+      
+      <text 
+        x="50" 
+        y="44" 
+        fontSize="36" 
+        fontWeight="800" 
+        fill="url(#ssGradient)"
+        fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        textAnchor="middle"
+        filter="url(#ssTextShadow)"
+        style={{
+          letterSpacing: '-0.05em'
+        }}
+      >
+        SS
+      </text>
+    </svg>
+  );
+}; // ← IMPORTANT: Semicolon here!
+
+// Clean SS favicon
+const SSFavicon = ({ size = 32, className = "" }) => {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 64 64" 
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="faviconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#312e81" />
+          <stop offset="50%" stopColor="#1e1b4b" />
+          <stop offset="100%" stopColor="#0f0c29" />
+        </linearGradient>
+        
+        <linearGradient id="faviconText" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="25%" stopColor="#e879f9" />
+          <stop offset="75%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+        
+        <filter id="faviconGlow">
+          <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+          <feMerge> 
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <rect 
+        x="4" 
+        y="4" 
+        width="56" 
+        height="56" 
+        rx="14" 
+        ry="14" 
+        fill="url(#faviconBg)" 
+        stroke="url(#faviconText)" 
+        strokeWidth="1"
+      />
+      
+      <text 
+        x="32" 
+        y="42" 
+        fontSize="24" 
+        fontWeight="900" 
+        fill="url(#faviconText)"
+        textAnchor="middle"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        filter="url(#faviconGlow)"
+        style={{
+          letterSpacing: '-0.1em'
+        }}
+      >
+        SS
+      </text>
+    </svg>
+  );
+};
+
 const safeString = (value) => value ? String(value) : '';
 const safeNumber = (value) => Number(value) || 0;
 
@@ -740,14 +905,23 @@ const Header = React.memo(({
             )}
             
             <button
-              onClick={() => {
-                navigate('/');
-                setCurrentView('feed');
-              }}
-              className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-300 to-purple-400 bg-clip-text text-transparent hover:scale-105 transition-transform"
-            >
-              SickoScoop
-            </button>
+  onClick={() => {
+    navigate('/');
+    setCurrentView('feed');
+  }}
+  className="flex items-center space-x-3 hover:scale-105 transition-transform"
+>
+  {/* Show SS favicon + full logo on desktop */}
+  <div className="hidden sm:flex items-center space-x-3">
+    <SSFavicon size={36} />
+    <SickoScoopLogo size="small" />
+  </div>
+  
+  {/* Show just SS logo on mobile */}
+  <div className="sm:hidden">
+    <SSLogo size="small" />
+  </div>
+</button>
             
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
