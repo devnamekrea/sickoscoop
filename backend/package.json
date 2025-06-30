@@ -4,14 +4,7 @@
   "description": "SickoScoop Backend API Server",
   "main": "enhanced-server.js",
   "scripts": {
-    "start": "node enhanced-server.js",
-    "dev": "nodemon enhanced-server.js",
-    "build": "npm install --production=false",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "start": "node enhanced-server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -22,7 +15,6 @@
     "helmet": "^6.1.5",
     "multer": "^1.4.5-lts.1",
     "aws-sdk": "^2.1379.0",
-    "http": "^0.0.1-security",
     "socket.io": "^4.6.2",
     "compression": "^1.7.4",
     "file-type": "^18.3.0",
@@ -30,19 +22,6 @@
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.3",
     "uuid": "^9.0.0",
-    "dotenv": "^16.0.3",
-    "path": "^0.12.7",
-    "fs": "^0.0.1-security"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.22"
-  },
-  "keywords": [
-    "social-media",
-    "privacy",
-    "transparency",
-    "community"
-  ],
-  "author": "SickoScoop Team",
-  "license": "MIT"
+    "dotenv": "^16.0.3"
+  }
 }

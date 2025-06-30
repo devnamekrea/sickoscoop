@@ -2,12 +2,17 @@
   "name": "sickoscoop",
   "version": "1.0.0",
   "description": "Revolutionary social media platform with anti-stalking protection",
+<<<<<<< HEAD
   "main": "backend/enhanced-server.js",
+=======
+  "main": "enhanced-server.js",
+>>>>>>> 6ad1c49ea39964255257d50cc83a231d63d29308
   "engines": {
     "node": "18.x",
     "npm": "9.x"
   },
   "scripts": {
+<<<<<<< HEAD
     "start": "cd backend && node enhanced-server.js",
     "build": "npm run install-all && npm run build-frontend",
     "build-frontend": "cd frontend && npm install --production=false && npm run build && mv build ../backend/build",
@@ -32,4 +37,39 @@
     "backend",
     "frontend"
   ]
+=======
+    "start": "node enhanced-server.js",
+    "build": "npm install && cd frontend && npm install && npm run build",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "dev-backend": "nodemon enhanced-server.js",
+    "dev-frontend": "cd frontend && npm start",
+    "clean": "rm -rf node_modules frontend/node_modules frontend/build",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "multer": "^1.4.5-lts.1",
+    "aws-sdk": "^2.1467.0",
+    "socket.io": "^4.7.2",
+    "compression": "^1.7.4",
+    "file-type": "^16.5.4",
+    "sharp": "^0.32.5",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["social-media", "privacy", "security", "react", "node"],
+  "author": "devnamekrea",
+  "license": "MIT"
+>>>>>>> 6ad1c49ea39964255257d50cc83a231d63d29308
 }
