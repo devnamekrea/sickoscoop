@@ -58,10 +58,11 @@ app.use(compression());
 // Enhanced CORS - Works for ALL environments
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:3001',
+  'http://localhost:3001', 
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'https://sickoscoop-backend-deo45.ondigitalocean.app',
+  'https://sickoscoop.vercel.app',  // ← ADD THIS LINE
   'https://sickoscoop.netlify.app',
   'https://sickoscoop-frontend.netlify.app',
   'https://sickoscoop-backend.ondigitalocean.app',
