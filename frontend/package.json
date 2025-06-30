@@ -1,20 +1,26 @@
 {
   "name": "sickoscoop-frontend",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "SickoScoop Frontend - React social media application with anti-stalking protection",
   "private": true,
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
+  },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "lucide-react": "^0.263.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^3.3.2"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build:copy": "npm run build && cp -r build/* ../backend/build/"
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -35,8 +41,26 @@
     ]
   },
   "devDependencies": {
-    "tailwindcss": "^3.3.0",
-    "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.24"
-  }
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0"
+  },
+  "proxy": "http://localhost:8080",
+  "homepage": ".",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devnamekrea/sickoscoop.git"
+  },
+  "keywords": [
+    "react",
+    "social-media",
+    "frontend",
+    "sickoscoop",
+    "privacy",
+    "security"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }

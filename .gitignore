@@ -1,16 +1,102 @@
+# Dependencies - Global patterns to catch all node_modules
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
 backend/.env
 frontend/.env
 *.env
-backend/
-.DS_Store
+.env
+.env.*
+
+# Backend specific ignores
+backend/node_modules/
+backend/logs/
+backend/build/
+backend/uploads/
+backend/*.log
+
+# Frontend specific ignores
+frontend/node_modules/
+frontend/build/
+frontend/.eslintcache
+
+# Cache directories - Enhanced to catch all cache types
+.cache
+.parcel-cache
+**/.cache/
+**/node_modules/.cache/
+.npm
+.eslintcache
+
+# Production builds
+build/
+dist/
+*.tgz
+
 # macOS system files
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-.DS_Store
-.env
-.env.*
-*.env
-.env
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Optional REPL history
+.node_repl_history
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Log files
+logs/
+*.log
+
+# Package manager directories
+.pnp
+.pnp.js
+
+# Misc
+*.tsbuildinfo
