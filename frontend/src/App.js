@@ -884,7 +884,8 @@ const Header = React.memo(({
   selectedPost,
   onBackToFeed,
   navigate,
-  onSettingsClick
+  onSettingsClick,
+  fetchPublicPosts
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -1071,20 +1072,23 @@ const Header = React.memo(({
               {currentView !== 'post' && (
                 <>
                   <button
-                    onClick={() => {
-                      navigate('/');
-                      setCurrentView('feed');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-left flex items-center space-x-3 ${
-                      currentView === 'feed' 
-                        ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
-                        : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <span className="text-lg">📱</span>
-                    <span>Feed</span>
-                  </button>
+  onClick={() => {
+    navigate('/');
+    if (user) {
+      setCurrentView('feed');
+    } else {
+      setCurrentView('public');
+      fetchPublicPosts();
+    }
+  }}
+  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm lg:text-base ${
+    currentView === 'feed' || currentView === 'public'
+      ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
+      : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
+  }`}
+>
+  Feed
+</button>
                   
                   <button
                     onClick={() => {
@@ -2645,6 +2649,7 @@ const handleSettingsClick = () => {
             onBackToFeed={handleBackToFeed}
             navigate={navigate}
             onSettingsClick={handleSettingsClick}
+            fetchPublicPosts={fetchPublicPosts} 
           />
 
           <main className="container mx-auto px-4 py-6 max-w-2xl">
