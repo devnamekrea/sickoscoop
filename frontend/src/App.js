@@ -907,7 +907,12 @@ const Header = React.memo(({
             <button
   onClick={() => {
     navigate('/');
-    setCurrentView('feed');
+    if (user) {
+      setCurrentView('feed');
+    } else {
+      setCurrentView('public');
+      fetchPublicPosts();
+    }
   }}
   className="flex items-center space-x-3 hover:scale-105 transition-transform"
 >
