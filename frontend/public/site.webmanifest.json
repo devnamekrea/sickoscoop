@@ -1,0 +1,17 @@
+{
+  "name": "SickoScoop - Stop Stalkers Through Transparency",
+  "short_name": "SickoScoop",
+  "description": "A social platform built for genuine communication and transparency",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#8b5cf6",
+  "background_color": "#0f172a",
+  "orientation": "portrait"
+}
