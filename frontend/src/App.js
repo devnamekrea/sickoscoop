@@ -301,30 +301,6 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
-// Enhanced Share Modal Component
-const ShareModal = React.memo(({ post, isOpen, onClose }) => {
-  const [copied, setCopied] = useState(false);
-  const postUrl = generatePostUrl(post._id);
-  const shareText = `Check out this post by ${post.userId?.username || 'someone'} on SickoScoop: "${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}"`;
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(postUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      const textArea = document.createElement('textarea');
-      textArea.value = postUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
 const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
   if (!isOpen) return null;
 
@@ -463,6 +439,30 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
     </div>
   );
 });
+
+// Enhanced Share Modal Component
+const ShareModal = React.memo(({ post, isOpen, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const postUrl = generatePostUrl(post._id);
+  const shareText = `Check out this post by ${post.userId?.username || 'someone'} on SickoScoop: "${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}"`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      const textArea = document.createElement('textarea');
+      textArea.value = postUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleSocialShare = (platform) => {
     const encodedText = encodeURIComponent(shareText);
