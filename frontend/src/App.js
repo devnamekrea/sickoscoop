@@ -306,8 +306,11 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
+      {/* FIXED: Added flex flex-col structure to prevent button cutoff */}
+      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        
+        {/* Header - Fixed at top */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-600/30 flex-shrink-0">
           <h2 className="text-2xl font-bold text-white">terms of transparency, service and privacy policy</h2>
           <button 
             onClick={onClose}
@@ -317,7 +320,8 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
           </button>
         </div>
         
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        {/* FIXED: Content area - scrollable, takes remaining space */}
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="prose prose-invert prose-slate max-w-none">
             <div className="space-y-6 text-slate-300">
               <div>
@@ -416,28 +420,45 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
 
               <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
                 <p className="text-sm text-slate-400">
-                  <strong>by clicking "I Accept Terms of Service" below, you acknowledge that you have read, 
+                  <strong>by clicking "I Accept" below, you acknowledge that you have read, 
                   understood, and agree to be bound by these terms and our mission to stop anonymous stalkers and 
-                  promote transparency in online interactions.</strong>
+                  promote transparency in online interactions</strong>
                 </p>
               </div>
             </div>
           </div>
         </div>
         
-        <div className="flex justify-end space-x-3 p-6 border-t border-slate-600/30 bg-slate-900/50">
-          <button
-            onClick={onClose}
-            className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-600/50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onAccept}
-            className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-amber-500/25 border border-amber-500/50"
-          >
-            I Accept Terms of Service
-          </button>
+        {/* FIXED: Footer buttons - always visible, never cut off */}
+        <div className="flex-shrink-0 border-t border-slate-600/30 bg-slate-900/50 p-6">
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-600/50 hover:border-slate-500"
+            >
+              Cancel
+            </button>
+            
+            {/* UPDATED: Accept button with orange-to-purple gradient matching terms link */}
+            <button
+              onClick={onAccept}
+              className="px-8 py-3 relative rounded-lg transition-all duration-300 shadow-lg overflow-hidden group border-2 border-transparent font-semibold text-white min-w-[240px]"
+            >
+              {/* Main gradient background - matching your terms link */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-orange-400 via-pink-400 via-purple-400 to-indigo-400"></div>
+              
+              {/* Hover effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-orange-300 via-pink-300 via-purple-300 to-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/40 via-orange-400/40 via-pink-400/40 via-purple-400/40 to-indigo-400/40 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 scale-110"></div>
+              
+              <span className="relative z-10 flex items-center justify-center space-x-2">
+                <span>I Accept</span>
+                <div className="w-4 h-4 bg-gradient-to-r from-orange-200 to-pink-200 rounded-full opacity-90 group-hover:scale-110 transition-transform duration-300"></div>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
