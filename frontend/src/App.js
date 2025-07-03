@@ -308,7 +308,7 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
-          <h2 className="text-2xl font-bold text-white">Terms of Service</h2>
+          <h2 className="text-2xl font-bold text-white">terms of transparency, service and privacy policy</h2>
           <button 
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
@@ -321,72 +321,76 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
           <div className="prose prose-invert prose-slate max-w-none">
             <div className="space-y-6 text-slate-300">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-4">Welcome to SickoScoop</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">welcome to sickoscoop</h2>
                 <p className="text-lg leading-relaxed">
-                  The goal of this app is to stop Facebook "Are We Dating The Same Guy?" ("AWDTSG") stalkers. 
-                  These losers represent yet another example of how the greatest threat to romance, dating and love 
-                  is the anonymity of those in power.
+                  the goal of this app is to stop online stalkers and cyberbullies such as the creators, admins, mods and members of Facebook's 
+                  "Are We Dating The Same Guy?" ("AWDTSG") groups. these stalkers and cyberbullies remind us that the greatest threat to life is 
+                  also that which confronts romance, dating and love: the anonymity of those in power
                 </p>
               </div>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">Terms of Transparency</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">terms of transparency</h3>
                 <p className="text-lg leading-relaxed">
-                  Be transparent with us and we will be transparent with you. Our terms of transparency are light and reciprocity.
+                  be transparent with us and we will be transparent with you
                 </p>
               </section>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">Terms of Service</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">terms of service</h3>
                 <p className="leading-relaxed mb-4">
-                  SickoScoop builds technologies and services that enable anyone, including victims of Facebook AWDTSG stalkers, 
-                  to connect with each other, build communities and protect one other. These terms govern your use of SickoScoop. 
-                  We abide by any and all applicable laws.
+                  sickoscoop builds technologies and services that enable anyone, including victims of Facebook AWDTSG stalkers, 
+                  to connect with each other, build communities and protect one other. these terms govern your use of sickoscoop. 
+                  we abide by any and all applicable laws
                 </p>
                 <p className="leading-relaxed">
-                  <strong>Unlike other platforms like Facebook, Twitter, Instagram, Google, Reddit et al., we do not harvest nor sell your data.</strong> 
-                  When you interact with SickoScoop, we do not exploit you. Unlike these other platforms, we do not lie to you.
+                  <strong>unlike other platforms like Facebook, Twitter, Instagram, Google, Reddit et al., we do not harvest nor sell your data.</strong>  
+                  when you interact with sickoscoop, we do not exploit you. unlike these other platforms, we do not lie to you
                 </p>
               </section>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">Money, Oil + Data</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">money, oil + data</h3>
                 <p className="leading-relaxed mb-4">
-                  The Facebook model of "social media" claims that the surveillance they do on you and everyone you love is because 
-                  they want to show you "personalized ads". This way you can better navigate the "free market". Nothing could be 
-                  further from the truth. This is why Facebook <em>never</em> shows you <em>how</em> they decide what "personalized ads" they show you.
+                  the Facebook model of "social media" claims that the surveillance they do on you and everyone you love is because 
+                  they want to show you "personalized ads". this way you can better navigate the "free market". nothing could be 
+                  further from the truth. this is why Facebook <em>never</em> shows you <em>how</em> they decide what "personalized ads" they show you
                 </p>
                 <p className="leading-relaxed mb-4">
-                  Like those who own central banks that print our money and those who own all the industries without which we could 
-                  hardly live our everyday lives, Facebook's bosses, administrators and moderators – as well as those who build and 
-                  operate their algorithms and apps – remain anonymous. This is how they control and harm you. This is why you cannot 
-                  protect the data coalescing about your soul in our machine-language life-world. This is what they want.
+                  like those who own central banks and all the industries without which we could hardly live our everyday lives,
+                  Facebook's bosses, admins and mods – as well as those who build and operate their algorithms and apps – remain anonymous.
+                  this is how they control and harm you. this is why you are powerless to protect the privacy and authenticity of the data 
+                  coalescing about your soul in our machine-language life-world. this is what they want
                 </p>
                 <p className="leading-relaxed">
-                  <strong>But the solution is simple.</strong> If they cannot be honest while they interact with you, then you should not 
-                  interact with them. SickoScoop is built to help you retrieve your freedom and dignity and share them with others.
+                  <strong>but the solution is simple.</strong> if they cannot be honest while they interact with you, then you should not 
+                  interact with them. sickoscoop is built to help you retrieve your freedom and dignity
                 </p>
               </section>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">Privacy Policy</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">privacy policy</h3>
                 <p className="leading-relaxed mb-4">
-                  Opposite the Facebook model of invading your privacy while they remain anonymous, SickoScoop only interacts with 
+                  opposite the Facebook model of invading your privacy while they remain anonymous, sickoscoop only interacts with 
                   your data to the extent that it can create a more transparent and safe online interaction for you as well as us. 
-                  We grow together through that which military-fronts like Facebook lack: <strong>the spirit of reciprocity</strong>.
+                  we grow together through that which military-fronts like Facebook lack: <strong>light and reciprocity</strong>.
                 </p>
                 <p className="leading-relaxed">
-                  We are a small community of humble, good people. We do not charge you to use SickoScoop. We do not show you ads. 
-                  For this we would be grateful, if you could spread the word and/or donate to our cause.
+                  we are a small community of humble, good people. we do not charge you to use sickoscoop. we do not show you ads. 
+                  for this we would be grateful, if you could spread the word and/or donate to our cause. for now, we are grateful 
+                  to Dr. Lucas Murrey who has agreed to donate to us a significant amount of any and all further donations he receives:
+                  <a href="https://www.gofundme.com/f/StopStalkers" className="text-blue-400 hover:text-blue-300 ml-1 underline">
+                    https://www.gofundme.com/f/StopStalkers
+                  </a>
                 </p>
               </section>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">PDF Watermarking & Tracking</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">pdf watermarking & tracking</h3>
                 <p className="leading-relaxed">
-                  When you upload PDF documents to SickoScoop, they will be watermarked with your username and tracking information. 
-                  This helps protect content creators and maintains accountability within our community. We track PDF access for 
-                  security purposes and to prevent misuse of shared documents.
+                  when you upload pdf documents to sickoscoop, they will be watermarked with your username and tracking information. 
+                  this helps protect content creators and maintains accountability within our community. we track PDF access for 
+                  security purposes and to prevent misuse of shared documents
                 </p>
               </section>
 
@@ -401,18 +405,18 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
               </section>
 
               <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
-                <h4 className="text-lg font-semibold text-white mb-3">Our Mission</h4>
+                <h4 className="text-lg font-semibold text-white mb-3">our mission</h4>
                 <p className="text-slate-300 leading-relaxed">
-                  SickoScoop is built on principles of transparency, reciprocity, and genuine human connection. 
-                  We believe in creating safe spaces where people can connect without fear of stalking, harassment, 
-                  or surveillance capitalism. By joining our community, you're helping build a better alternative 
-                  to exploitative social media platforms.
+                  sickoScoop is built on principles of transparency, reciprocity and genuine human connection. 
+                  we believe in creating safe spaces where people can connect without fear of stalking, harassment, 
+                  or surveillance banksters. by joining our community, you're helping build a better alternative 
+                  to exploitative social media platforms/military fronts for the above-noted anonymous creeps in power
                 </p>
               </div>
 
               <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
                 <p className="text-sm text-slate-400">
-                  <strong>By clicking "I Accept Terms of Service" below, you acknowledge that you have read, 
+                  <strong>by clicking "I Accept Terms of Service" below, you acknowledge that you have read, 
                   understood, and agree to be bound by these terms and our mission to stop anonymous stalkers and 
                   promote transparency in online interactions.</strong>
                 </p>
@@ -728,6 +732,7 @@ const LandingPage = React.memo(({
   handleRegister, 
   loading, 
   error,
+  setError,
   onBrowsePublic,
   termsAccepted,
   setTermsAccepted,
@@ -751,7 +756,7 @@ const LandingPage = React.memo(({
       </div>
 
       <h1 className="text-4xl md:text-6xl font-bold text-white mb-10 drop-shadow-2xl leading-none">
-        <span className="whitespace-nowrap">STOP STALKERS</span>
+        <span className="whitespace-nowrap">STOP AWDTSG STALKERS</span>
         <br />
         <span className="text-2xl md:text-4xl block my-2">ON</span>
         <span className="bg-gradient-to-r from-orange-300 via-red-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent block animate-pulse relative">
@@ -857,16 +862,26 @@ const LandingPage = React.memo(({
                 <label htmlFor="terms-checkbox" className="text-slate-300 text-sm leading-relaxed">
                   I have read and agree to the{' '}
                   <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setShowTermsModal(true);
-                    }}
-                    className="text-amber-400 hover:text-amber-300 underline font-medium"
-                  >
-                    Terms of Service, Privacy Policy, and Terms of Transparency
-                  </button>
-                  {' '}including SickoScoop's mission to stop anonymous stalkers and promote genuine communication.
+  type="button"
+  onClick={(e) => {
+    e.preventDefault();
+    setShowTermsModal(true);
+  }}
+  className="relative inline-block font-medium transition-all duration-300 group"
+>
+  {/* Main gradient text matching SICKOSCOOP */}
+  <span className="bg-gradient-to-r from-orange-400 via-rose-400 via-pink-400 to-purple-400 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-rose-300 group-hover:via-pink-300 group-hover:to-purple-300 transition-all duration-300 font-semibold">
+    terms of transparency, service and privacy policy
+  </span>
+  
+  {/* Animated underline with same gradient */}
+  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500/70 via-rose-500/70 via-pink-500/70 to-purple-500/70 transform scale-x-100 group-hover:scale-x-110 group-hover:from-orange-400 group-hover:via-rose-400 group-hover:via-pink-400 group-hover:to-purple-400 transition-transform duration-300"></div>
+  
+  {/* Subtle glow on hover */}
+  <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 via-rose-400/10 via-pink-400/10 to-purple-400/10 rounded opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 scale-110"></div>
+</button>
+
+                  {' '}including sickoscoop's mission to stop anonymous stalkers and promote genuine communication
                 </label>
               </div>
               
@@ -2840,6 +2855,7 @@ const handleSettingsClick = () => {
           handleRegister={handleRegister}
           loading={loading}
           error={error}
+          setError={setError}
           onBrowsePublic={handleBrowsePublic}
           termsAccepted={termsAccepted}
 setTermsAccepted={setTermsAccepted}
