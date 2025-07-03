@@ -383,7 +383,12 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
                   we are a small community of humble, good people. we do not charge you to use sickoscoop. we do not show you ads. 
                   for this we would be grateful, if you could spread the word and/or donate to our cause. for now, we are grateful 
                   to Dr. Lucas Murrey who has agreed to donate to us a significant amount of any and all further donations he receives:
-                  <a href="https://www.gofundme.com/f/StopStalkers" className="text-blue-400 hover:text-blue-300 ml-1 underline">
+                  <a 
+  href="https://www.gofundme.com/f/StopStalkers" 
+  target="_blank" 
+  rel="noopener noreferrer"
+  className="text-blue-400 hover:text-blue-300 ml-1 underline"
+>
                     https://www.gofundme.com/f/StopStalkers
                   </a>
                 </p>
