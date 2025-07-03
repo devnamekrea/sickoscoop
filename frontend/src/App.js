@@ -781,22 +781,23 @@ const LandingPage = React.memo(({
         </div>
       </div>
 
-      <h1 className="text-4xl md:text-6xl font-bold text-white mb-10 drop-shadow-2xl leading-none">
-  <span className="whitespace-nowrap">
-    STOP{' '}
-    <span className="bg-gradient-to-r from-pink-300 via-pink-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">
-      AWDTSG
-    </span>
-    {' '}STALKERS
-  </span>
-  <br />
-  <span className="text-2xl md:text-4xl block my-2">ON</span>
-  <span className="bg-gradient-to-r from-orange-300 via-red-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent block animate-pulse relative">
-    <span className="absolute inset-0 bg-gradient-to-r from-orange-200 via-red-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent blur-sm opacity-80"></span>
-    <span className="absolute inset-0 bg-gradient-to-r from-amber-300 via-rose-300 via-sky-300 to-violet-300 bg-clip-text text-transparent blur-xs opacity-40"></span>
-    SICKOSCOOP
-  </span>
-</h1>
+      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-10 drop-shadow-2xl leading-tight max-w-4xl">
+        <span className="block sm:inline">
+          STOP{' '}
+          <span className="bg-gradient-to-r from-pink-300 via-pink-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">
+            AWDTSG
+          </span>
+          {' '}
+          <span className="block sm:inline">STALKERS</span>
+        </span>
+        <br />
+        <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl block my-2">ON</span>
+       <span className="bg-gradient-to-r from-orange-300 via-red-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent block animate-pulse relative text-xl sm:text-2xl md:text-3xl lg:text-5xl">
+  <span className="absolute inset-0 bg-gradient-to-r from-orange-200 via-red-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent blur-sm opacity-80"></span>
+  <span className="absolute inset-0 bg-gradient-to-r from-amber-300 via-rose-300 via-sky-300 to-violet-300 bg-clip-text text-transparent blur-xs opacity-40"></span>
+  SICKOSCOOP
+        </span>
+      </h1>
 
       <div className="mb-8 flex flex-col items-center">
         <button
