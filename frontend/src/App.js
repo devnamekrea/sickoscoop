@@ -325,6 +325,145 @@ const ShareModal = React.memo(({ post, isOpen, onClose }) => {
     }
   };
 
+const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
+          <h2 className="text-2xl font-bold text-white">Terms of Service</h2>
+          <button 
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <div className="prose prose-invert prose-slate max-w-none">
+            <div className="space-y-6 text-slate-300">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-4">Welcome to SickoScoop</h2>
+                <p className="text-lg leading-relaxed">
+                  The goal of this app is to stop Facebook "Are We Dating The Same Guy?" ("AWDTSG") stalkers. 
+                  These losers represent yet another example of how the greatest threat to romance, dating and love 
+                  is the anonymity of those in power.
+                </p>
+              </div>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">Terms of Transparency</h3>
+                <p className="text-lg leading-relaxed">
+                  Be transparent with us and we will be transparent with you. Our terms of transparency are light and reciprocity.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">Terms of Service</h3>
+                <p className="leading-relaxed mb-4">
+                  SickoScoop builds technologies and services that enable anyone, including victims of Facebook AWDTSG stalkers, 
+                  to connect with each other, build communities and protect one other. These terms govern your use of SickoScoop. 
+                  We abide by any and all applicable laws.
+                </p>
+                <p className="leading-relaxed">
+                  <strong>Unlike other platforms like Facebook, Twitter, Instagram, Google, Reddit et al., we do not harvest nor sell your data.</strong> 
+                  When you interact with SickoScoop, we do not exploit you. Unlike these other platforms, we do not lie to you.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">Money, Oil + Data</h3>
+                <p className="leading-relaxed mb-4">
+                  The Facebook model of "social media" claims that the surveillance they do on you and everyone you love is because 
+                  they want to show you "personalized ads". This way you can better navigate the "free market". Nothing could be 
+                  further from the truth. This is why Facebook <em>never</em> shows you <em>how</em> they decide what "personalized ads" they show you.
+                </p>
+                <p className="leading-relaxed mb-4">
+                  Like those who own central banks that print our money and those who own all the industries without which we could 
+                  hardly live our everyday lives, Facebook's bosses, administrators and moderators – as well as those who build and 
+                  operate their algorithms and apps – remain anonymous. This is how they control and harm you. This is why you cannot 
+                  protect the data coalescing about your soul in our machine-language life-world. This is what they want.
+                </p>
+                <p className="leading-relaxed">
+                  <strong>But the solution is simple.</strong> If they cannot be honest while they interact with you, then you should not 
+                  interact with them. SickoScoop is built to help you retrieve your freedom and dignity and share them with others.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">Privacy Policy</h3>
+                <p className="leading-relaxed mb-4">
+                  Opposite the Facebook model of invading your privacy while they remain anonymous, SickoScoop only interacts with 
+                  your data to the extent that it can create a more transparent and safe online interaction for you as well as us. 
+                  We grow together through that which military-fronts like Facebook lack: <strong>the spirit of reciprocity</strong>.
+                </p>
+                <p className="leading-relaxed">
+                  We are a small community of humble, good people. We do not charge you to use SickoScoop. We do not show you ads. 
+                  For this we would be grateful, if you could spread the word and/or donate to our cause.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">PDF Watermarking & Tracking</h3>
+                <p className="leading-relaxed">
+                  When you upload PDF documents to SickoScoop, they will be watermarked with your username and tracking information. 
+                  This helps protect content creators and maintains accountability within our community. We track PDF access for 
+                  security purposes and to prevent misuse of shared documents.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-semibold text-white mb-3">Contact Information</h3>
+                <p className="leading-relaxed">
+                  If you have any questions, please contact us: 
+                  <a href="mailto:admin@sickoscoop.com" className="text-blue-400 hover:text-blue-300 ml-1 underline">
+                    admin@sickoscoop.com
+                  </a>
+                </p>
+              </section>
+
+              <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
+                <h4 className="text-lg font-semibold text-white mb-3">Our Mission</h4>
+                <p className="text-slate-300 leading-relaxed">
+                  SickoScoop is built on principles of transparency, reciprocity, and genuine human connection. 
+                  We believe in creating safe spaces where people can connect without fear of stalking, harassment, 
+                  or surveillance capitalism. By joining our community, you're helping build a better alternative 
+                  to exploitative social media platforms.
+                </p>
+              </div>
+
+              <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-600/30">
+                <p className="text-sm text-slate-400">
+                  <strong>By clicking "I Accept Terms of Service" below, you acknowledge that you have read, 
+                  understood, and agree to be bound by these terms and our mission to stop anonymous stalkers and 
+                  promote transparency in online interactions.</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end space-x-3 p-6 border-t border-slate-600/30 bg-slate-900/50">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-600/50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onAccept}
+            className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-amber-500/25 border border-amber-500/50"
+          >
+            I Accept Terms of Service
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
   const handleSocialShare = (platform) => {
     const encodedText = encodeURIComponent(shareText);
     const encodedUrl = encodeURIComponent(postUrl);
@@ -589,7 +728,11 @@ const LandingPage = React.memo(({
   handleRegister, 
   loading, 
   error,
-  onBrowsePublic
+  onBrowsePublic,
+  termsAccepted,
+  setTermsAccepted,
+  showTermsModal,
+  setShowTermsModal
 }) => (
   <div className="min-h-screen relative overflow-hidden border-4 border-orange-600/80">
     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900">
@@ -678,7 +821,7 @@ const LandingPage = React.memo(({
               placeholder="Username"
               value={registerForm.username}
               onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
               autoComplete="username"
               className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
@@ -687,7 +830,7 @@ const LandingPage = React.memo(({
               placeholder="Email"
               value={registerForm.email}
               onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
               autoComplete="email"
               className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
@@ -696,22 +839,67 @@ const LandingPage = React.memo(({
               placeholder="Password"
               value={registerForm.password}
               onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
               autoComplete="new-password"
               className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
             />
+            
+            {/* Terms of Service Agreement */}
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3 p-4 bg-black/20 rounded-lg border border-slate-600/30">
+                <input
+                  type="checkbox"
+                  id="terms-checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-amber-600 bg-black/40 border-slate-600 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <label htmlFor="terms-checkbox" className="text-slate-300 text-sm leading-relaxed">
+                  I have read and agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowTermsModal(true);
+                    }}
+                    className="text-amber-400 hover:text-amber-300 underline font-medium"
+                  >
+                    Terms of Service, Privacy Policy, and Terms of Transparency
+                  </button>
+                  {' '}including SickoScoop's mission to stop anonymous stalkers and promote genuine communication.
+                </label>
+              </div>
+              
+              {!termsAccepted && (
+                <p className="text-xs text-slate-500">
+                  ✓ You must accept our terms to join the fight against anonymous stalkers
+                </p>
+              )}
+            </div>
+            
             <button
               onClick={handleRegister}
-              disabled={loading}
-              className="w-full px-12 py-4 bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white text-xl font-semibold rounded-lg hover:scale-105 transform transition-all duration-300 shadow-2xl hover:shadow-amber-500/50 border-2 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 disabled:opacity-50"
+              disabled={loading || !termsAccepted}
+              className={`w-full px-12 py-4 text-xl font-semibold rounded-lg transition-all duration-300 shadow-2xl border-2 ${
+                termsAccepted 
+                  ? 'bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white hover:scale-105 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 hover:shadow-amber-500/50' 
+                  : 'bg-slate-800/50 text-slate-500 border-slate-600/30 cursor-not-allowed'
+              } disabled:opacity-50`}
             >
               {loading ? 'Creating Account...' : 'Join Sicko'}
             </button>
           </div>
         )}
         
+        {/* UPDATED TOGGLE BUTTON */}
         <button
-          onClick={() => setShowRegister(!showRegister)}
+          onClick={() => {
+            setShowRegister(!showRegister);
+            // Reset terms acceptance when switching between login/register
+            setTermsAccepted(false);
+            // Clear any existing errors
+            setError('');
+          }}
           className="mt-4 text-slate-300 hover:text-white transition-colors"
         >
           {showRegister ? 'Already have an account? Sign in' : 'Need an account? Register'}
@@ -767,7 +955,7 @@ const LandingPage = React.memo(({
         ))}
       </div>
 
-      {/* ✨ NEW: Copyright Notice */}
+      {/* Copyright Notice */}
       <div className="mt-16 pt-8 border-t border-slate-600/30 w-full max-w-4xl">
         <div className="text-center">
           <p className="text-slate-400 text-sm">
@@ -779,6 +967,16 @@ const LandingPage = React.memo(({
         </div>
       </div>
     </div>
+
+    {/* TERMS OF SERVICE MODAL - ADD AT THE END */}
+    <TermsOfServiceModal 
+      isOpen={showTermsModal}
+      onClose={() => setShowTermsModal(false)}
+      onAccept={() => {
+        setTermsAccepted(true);
+        setShowTermsModal(false);
+      }}
+    />
   </div>
 ));
 
@@ -2400,7 +2598,9 @@ export default function App() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
   const [showRegister, setShowRegister] = useState(false);
-  
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   const fileInputRef = useRef(null);
 
   // Check authentication on mount
@@ -2491,34 +2691,41 @@ export default function App() {
   };
 
   const handleRegister = async () => {
-    if (!registerForm.username || !registerForm.email || !registerForm.password) {
-      setError('Please fill in all fields');
-      return;
-    }
+  if (!registerForm.username || !registerForm.email || !registerForm.password) {
+    setError('Please fill in all fields');
+    return;
+  }
 
-    setLoading(true);
-    setError('');
+  // Check if terms are accepted
+  if (!termsAccepted) {
+    setError('You must accept the Terms of Service to create an account');
+    return;
+  }
 
-    try {
-      const data = await apiRequest('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(registerForm)
-      });
+  setLoading(true);
+  setError('');
 
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
-      setUser(data.user);
-      setIsLoggedIn(true);
-      setCurrentView('feed');
-      setRegisterForm({ username: '', email: '', password: '' });
-      await fetchPosts();
-    } catch (error) {
-      console.error('Registration error:', error);
-      setError(error.message || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const data = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(registerForm)
+    });
+
+    localStorage.setItem('authToken', data.token);
+    localStorage.setItem('userData', JSON.stringify(data.user));
+    setUser(data.user);
+    setIsLoggedIn(true);
+    setCurrentView('feed');
+    setRegisterForm({ username: '', email: '', password: '' });
+    setTermsAccepted(false); // Reset terms for next time
+    await fetchPosts();
+  } catch (error) {
+    console.error('Registration error:', error);
+    setError(error.message || 'Registration failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -2634,6 +2841,10 @@ const handleSettingsClick = () => {
           loading={loading}
           error={error}
           onBrowsePublic={handleBrowsePublic}
+          termsAccepted={termsAccepted}
+setTermsAccepted={setTermsAccepted}
+showTermsModal={showTermsModal}
+setShowTermsModal={setShowTermsModal}
         />
       )}
 
