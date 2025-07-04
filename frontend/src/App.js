@@ -329,7 +329,7 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
                 <p className="text-lg leading-relaxed">
                   the goal of this app is to stop online stalkers and cyberbullies such as the creators, admins, mods and members of Facebook's 
                   "Are We Dating The Same Guy?" ("AWDTSG") groups. these stalkers and cyberbullies remind us that the greatest threat to life is 
-                  also that which confronts romance, dating and love: the anonymity of those in power
+                  also that which threatens romance, dating and love: the anonymity of those in power
                 </p>
               </div>
 
@@ -398,15 +398,15 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
                 <h3 className="text-xl font-semibold text-white mb-3">pdf watermarking & tracking</h3>
                 <p className="leading-relaxed">
                   when you upload pdf documents to sickoscoop, they will be watermarked with your username and tracking information. 
-                  this helps protect content creators and maintains accountability within our community. we track PDF access for 
+                  this helps protect content creators and maintains accountability within our community. we track pdf access for 
                   security purposes and to prevent misuse of shared documents
                 </p>
               </section>
 
               <section>
-                <h3 className="text-xl font-semibold text-white mb-3">Contact Information</h3>
+                <h3 className="text-xl font-semibold text-white mb-3">contact us</h3>
                 <p className="leading-relaxed">
-                  If you have any questions, please contact us: 
+                  if you have any questions, please contact us: 
                   <a href="mailto:admin@sickoscoop.com" className="text-blue-400 hover:text-blue-300 ml-1 underline">
                     admin@sickoscoop.com
                   </a>
@@ -637,6 +637,100 @@ const ShareModal = React.memo(({ post, isOpen, onClose }) => {
   );
 });
 
+// Add this SettingsModal component after your ShareModal component (around line 400-500)
+
+const SettingsModal = React.memo(({ isOpen, onClose, user }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-md w-full mx-4 max-h-96 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
+          <h3 className="text-xl font-semibold text-white">Settings & About</h3>
+          <button 
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-80">
+          <div className="space-y-6">
+            {/* User Info Section */}
+            {user && (
+              <div className="border-b border-slate-600/30 pb-4">
+                <h4 className="text-lg font-semibold text-white mb-3">Account</h4>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-amber-500/80">
+                    {user.username?.slice(0, 2).toUpperCase() || 'YU'}
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{user.username || 'Your Username'}</p>
+                    <p className="text-slate-400 text-sm">{user.email || 'your@email.com'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* About Section */}
+            <div className="border-b border-slate-600/30 pb-4">
+              <h4 className="text-lg font-semibold text-white mb-3">About SickoScoop</h4>
+              <p className="text-slate-300 text-sm mb-3">
+                SickoScoop is a social platform built for genuine communication and transparency. 
+                We believe in creating safe spaces where people can share without fear of stalking or harassment.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">Anti-Stalker Protection</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">PDF Watermarking & Tracking</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-slate-400 text-xs">Genuine Community Building</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy & Security */}
+            <div className="border-b border-slate-600/30 pb-4">
+              <h4 className="text-lg font-semibold text-white mb-3">Privacy & Security</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Privacy Score</span>
+                  <span className="text-green-400 text-sm font-semibold">{user?.privacyScore || 94}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Transparency</span>
+                  <span className="text-blue-400 text-sm font-semibold">{user?.transparencyScore || 98}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Community Score</span>
+                  <span className="text-purple-400 text-sm font-semibold">{user?.communityScore || 96}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center pt-2">
+              <p className="text-slate-400 text-sm font-medium">
+                © 2025 SickoScoop. All rights reserved.
+              </p>
+              <p className="text-slate-500 text-xs mt-1">
+                Version 3.0 • Building safer social connections
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // Enhanced Video Player Component
 const EnhancedVideoPlayer = React.memo(({ file }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -764,358 +858,290 @@ const LandingPage = React.memo(({
   setTermsAccepted,
   showTermsModal,
   setShowTermsModal
-}) => (
-  <div className="min-h-screen relative overflow-hidden border-4 border-orange-600/80">
-    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900">
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-r from-purple-800 to-indigo-700 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-slate-700 to-gray-600 rounded-full blur-lg animate-pulse delay-1000"></div>
-        <div className="absolute bottom-20 left-1/3 w-40 h-40 bg-gradient-to-r from-zinc-800 to-slate-700 rounded-full blur-2xl animate-pulse delay-2000"></div>
-      </div>
-    </div>
-
-    <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8 text-center">
-      <div className="mb-8 relative">
-        <div className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-slate-300 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-          SickoScoop
-        </div>
-      </div>
-
-      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-10 drop-shadow-2xl leading-tight max-w-4xl">
-        <span className="block sm:inline">
-          STOP{' '}
-          <span className="bg-gradient-to-r from-pink-300 via-pink-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">
-            AWDTSG
-          </span>
-          {' '}
-          <span className="block sm:inline">STALKERS</span>
-        </span>
-        <br />
-        <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl block my-2">ON</span>
-       <span className="bg-gradient-to-r from-orange-300 via-red-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent block animate-pulse relative text-xl sm:text-2xl md:text-3xl lg:text-5xl">
-  <span className="absolute inset-0 bg-gradient-to-r from-orange-200 via-red-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent blur-sm opacity-80"></span>
-  <span className="absolute inset-0 bg-gradient-to-r from-amber-300 via-rose-300 via-sky-300 to-violet-300 bg-clip-text text-transparent blur-xs opacity-40"></span>
-  SICKOSCOOP
-        </span>
-      </h1>
-
-      <div className="mb-8 flex flex-col items-center">
-        <button
-          onClick={onBrowsePublic}
-          className="px-8 py-3 bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white text-lg font-semibold rounded-lg hover:scale-105 transform transition-all duration-300 shadow-2xl hover:shadow-amber-500/50 border-2 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 backdrop-blur-md flex items-center space-x-3"
-        >
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-indigo-500 to-violet-600 rounded-full opacity-80 blur-sm animate-pulse"></div>
-            <div className="absolute inset-1 bg-gradient-to-tr from-orange-400 via-amber-500 to-red-500 rounded-full opacity-90"></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 transform rotate-45 opacity-70 blur-sm"></div>
-            <div className="absolute inset-1 bg-gradient-to-tr from-amber-300 via-orange-400 to-red-400 transform rotate-45 opacity-80"></div>
-            <div className="absolute inset-0 bg-gradient-to-bl from-violet-400 via-purple-500 to-indigo-600 opacity-60" style={{clipPath: 'polygon(50% 10%, 10% 90%, 90% 90%)'}}></div>
-            <div className="absolute inset-1 bg-gradient-to-tl from-orange-300 via-amber-400 to-yellow-400 opacity-70 animate-pulse" style={{clipPath: 'polygon(50% 15%, 15% 85%, 85% 85%)'}}></div>
-          </div>
-          <span>Browse Public Feed</span>
-        </button>
-        <p className="text-slate-400 text-sm mt-2">See what people are sharing • No account required</p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-blue-500/20 border border-red-500/50 rounded-lg text-red-300 max-w-md">
-          {error}
-        </div>
-      )}
-
-      <div className="mb-8 w-full max-w-md">
-        {!showRegister ? (
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={loginForm.email}
-              onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              autoComplete="email"
-              className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              autoComplete="current-password"
-              className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              className="w-full px-12 py-4 bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white text-xl font-semibold rounded-lg hover:scale-105 transform transition-all duration-300 shadow-2xl hover:shadow-amber-500/50 border-2 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 disabled:opacity-50"
-            >
-              {loading ? 'Entering...' : 'Enter Sicko'}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Username"
-              value={registerForm.username}
-              onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
-              autoComplete="username"
-              className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={registerForm.email}
-              onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
-              autoComplete="email"
-              className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={registerForm.password}
-              onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
-              onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
-              autoComplete="new-password"
-              className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            
-            {/* Terms of Service Agreement */}
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-4 bg-black/20 rounded-lg border border-slate-600/30">
-                <input
-                  type="checkbox"
-                  id="terms-checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-amber-600 bg-black/40 border-slate-600 rounded focus:ring-amber-500 focus:ring-2"
-                />
-                <label htmlFor="terms-checkbox" className="text-slate-300 text-sm leading-relaxed">
-                  I have read and agree to the{' '}
-                  <button
-  type="button"
-  onClick={(e) => {
-    e.preventDefault();
-    setShowTermsModal(true);
-  }}
-  className="relative inline-block font-medium transition-all duration-300 group"
->
-  {/* Main gradient text matching SICKOSCOOP */}
-  <span className="bg-gradient-to-r from-orange-400 via-rose-400 via-pink-400 to-purple-400 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-rose-300 group-hover:via-pink-300 group-hover:to-purple-300 transition-all duration-300 font-semibold">
-    terms of transparency, service and privacy policy
-  </span>
-  
-  {/* Animated underline with same gradient */}
-  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500/70 via-rose-500/70 via-pink-500/70 to-purple-500/70 transform scale-x-100 group-hover:scale-x-110 group-hover:from-orange-400 group-hover:via-rose-400 group-hover:via-pink-400 group-hover:to-purple-400 transition-transform duration-300"></div>
-  
-  {/* Subtle glow on hover */}
-  <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 via-rose-400/10 via-pink-400/10 to-purple-400/10 rounded opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 scale-110"></div>
-</button>
-
-                  {' '}including sickoscoop's mission to stop anonymous stalkers and promote genuine communication
-                </label>
-              </div>
-              
-              {!termsAccepted && (
-                <p className="text-xs text-slate-500">
-                  ✓ You must accept our terms to join the fight against anonymous stalkers
-                </p>
-              )}
-            </div>
-            
-            <button
-              onClick={handleRegister}
-              disabled={loading || !termsAccepted}
-              className={`w-full px-12 py-4 text-xl font-semibold rounded-lg transition-all duration-300 shadow-2xl border-2 ${
-                termsAccepted 
-                  ? 'bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white hover:scale-105 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 hover:shadow-amber-500/50' 
-                  : 'bg-slate-800/50 text-slate-500 border-slate-600/30 cursor-not-allowed'
-              } disabled:opacity-50`}
-            >
-              {loading ? 'Creating Account...' : 'Join Sicko'}
-            </button>
-          </div>
-        )}
-        
-        {/* UPDATED TOGGLE BUTTON */}
-        <button
-          onClick={() => {
-            setShowRegister(!showRegister);
-            // Reset terms acceptance when switching between login/register
-            setTermsAccepted(false);
-            // Clear any existing errors
-            setError('');
-          }}
-          className="mt-4 text-slate-300 hover:text-white transition-colors"
-        >
-          {showRegister ? 'Already have an account? Sign in' : 'Need an account? Register'}
-        </button>
-      </div>
-
-      <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
-        {[
-          { 
-            icon: (
-              <div className="relative w-12 h-12">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-300 via-indigo-400 to-violet-500 rounded-full opacity-80 blur-sm"></div>
-                <div className="absolute inset-1 bg-gradient-to-tr from-orange-300 via-orange-400 to-blue-500 rounded-full opacity-90 animate-pulse"></div>
-                <div className="absolute inset-2 bg-gradient-to-bl from-blue-300 via-purple-400 to-indigo-500 rounded-full opacity-70"></div>
-                <div className="absolute inset-3 bg-gradient-to-tl from-orange-300 via-purple-300 to-blue-400 rounded-full animate-pulse"></div>
-              </div>
-            ), 
-            title: 'Anti-Stalker Protection', 
-            desc: 'Advanced privacy controls' 
-          },
-          { 
-            icon: (
-              <div className="relative w-12 h-12">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-300 via-indigo-400 to-violet-500 transform rotate-45 opacity-80 blur-sm"></div>
-                <div className="absolute inset-1 bg-gradient-to-tr from-orange-300 via-orange-400 to-blue-500 transform rotate-45 opacity-90 animate-pulse"></div>
-                <div className="absolute inset-2 bg-gradient-to-bl from-blue-300 via-purple-400 to-indigo-500 transform rotate-45 opacity-70"></div>
-                <div className="absolute inset-3 bg-gradient-to-tl from-orange-300 via-purple-300 to-blue-400 transform rotate-45 animate-pulse"></div>
-              </div>
-            ), 
-            title: 'Decency', 
-            desc: 'No anonymous trolls' 
-          },
-          { 
-            icon: (
-              <div className="relative w-12 h-12">
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-400 via-purple-500 to-indigo-600 opacity-80 blur-sm" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
-                <div className="absolute inset-1 bg-gradient-to-tr from-orange-400 via-blue-700 to-amber-500 opacity-90 animate-pulse" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
-                <div className="absolute inset-2 bg-gradient-to-bl from-teal-400 via-cyan-500 to-blue-600 opacity-70" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
-                <div className="absolute inset-3 bg-gradient-to-tl from-blue-900 via-indigo-800 to-slate-800 animate-pulse" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
-              </div>
-            ), 
-            title: 'Genuine Community', 
-            desc: 'Keeping everyone safe' 
-          }
-        ].map((feature, idx) => (
-          <div key={idx} className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-slate-600/30 hover:bg-black/30 transition-all duration-300">
-            <div className="inline-block border-2 border-amber-500/80 rounded-lg p-3 mb-4 bg-black/30">
-              {feature.icon}
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-            <p className="text-slate-300">{feature.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Copyright Notice */}
-      <div className="mt-16 pt-8 border-t border-slate-600/30 w-full max-w-4xl">
-        <div className="text-center">
-          <p className="text-slate-400 text-sm">
-            © 2025 SickoScoop. All rights reserved.
-          </p>
-          <p className="text-slate-500 text-xs mt-2">
-            Building genuine connections through transparency and safety.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    {/* TERMS OF SERVICE MODAL - ADD AT THE END */}
-    <TermsOfServiceModal 
-      isOpen={showTermsModal}
-      onClose={() => setShowTermsModal(false)}
-      onAccept={() => {
-        setTermsAccepted(true);
-        setShowTermsModal(false);
-      }}
-    />
-  </div>
-));
-
-const SettingsModal = React.memo(({ isOpen, onClose, user }) => {
-  if (!isOpen) return null;
+}) => {
+  // PDF URL for all three feature cards
+  const pdfUrl = 'https://sickoscoop-media.sfo2.digitaloceanspaces.com/pdf/686506104ae944857f564b1d/1751600021104-tevvqr-totTos_pp.pdf';
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-md w-full mx-4 max-h-96 overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
-          <h3 className="text-xl font-semibold text-white">Settings & About</h3>
-          <button 
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+    <div className="min-h-screen relative overflow-hidden border-4 border-orange-600/80">
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-r from-purple-800 to-indigo-700 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-slate-700 to-gray-600 rounded-full blur-lg animate-pulse delay-1000"></div>
+          <div className="absolute bottom-20 left-1/3 w-40 h-40 bg-gradient-to-r from-zinc-800 to-slate-700 rounded-full blur-2xl animate-pulse delay-2000"></div>
+        </div>
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8 text-center">
+        <div className="mb-8 relative">
+          <div className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-slate-300 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            SickoScoop
+          </div>
+        </div>
+
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-10 drop-shadow-2xl leading-tight max-w-4xl">
+          <span className="block sm:inline">
+            STOP{' '}
+            <span className="bg-gradient-to-r from-pink-300 via-pink-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">
+              AWDTSG
+            </span>
+            {' '}
+            <span className="block sm:inline">STALKERS</span>
+          </span>
+          <br />
+          <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl block my-2">ON</span>
+         <span className="bg-gradient-to-r from-orange-300 via-red-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent block animate-pulse relative text-xl sm:text-2xl md:text-3xl lg:text-5xl">
+    <span className="absolute inset-0 bg-gradient-to-r from-orange-200 via-red-300 via-cyan-300 to-blue-300 bg-clip-text text-transparent blur-sm opacity-80"></span>
+    <span className="absolute inset-0 bg-gradient-to-r from-amber-300 via-rose-300 via-sky-300 to-violet-300 bg-clip-text text-transparent blur-xs opacity-40"></span>
+    SICKOSCOOP
+          </span>
+        </h1>
+
+        <div className="mb-8 flex flex-col items-center">
+          <button
+            onClick={onBrowsePublic}
+            className="px-8 py-3 bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white text-lg font-semibold rounded-lg hover:scale-105 transform transition-all duration-300 shadow-2xl hover:shadow-amber-500/50 border-2 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 backdrop-blur-md flex items-center space-x-3"
           >
-            <X className="h-5 w-5" />
+            <div className="relative w-6 h-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-indigo-500 to-violet-600 rounded-full opacity-80 blur-sm animate-pulse"></div>
+              <div className="absolute inset-1 bg-gradient-to-tr from-orange-400 via-amber-500 to-red-500 rounded-full opacity-90"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 transform rotate-45 opacity-70 blur-sm"></div>
+              <div className="absolute inset-1 bg-gradient-to-tr from-amber-300 via-orange-400 to-red-400 transform rotate-45 opacity-80"></div>
+              <div className="absolute inset-0 bg-gradient-to-bl from-violet-400 via-purple-500 to-indigo-600 opacity-60" style={{clipPath: 'polygon(50% 10%, 10% 90%, 90% 90%)'}}></div>
+              <div className="absolute inset-1 bg-gradient-to-tl from-orange-300 via-amber-400 to-yellow-400 opacity-70 animate-pulse" style={{clipPath: 'polygon(50% 15%, 15% 85%, 85% 85%)'}}></div>
+            </div>
+            <span>Browse Public Feed</span>
+          </button>
+          <p className="text-slate-400 text-sm mt-2">See what people are sharing • No account required</p>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-blue-500/20 border border-red-500/50 rounded-lg text-red-300 max-w-md">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-8 w-full max-w-md">
+          {!showRegister ? (
+            <div className="space-y-4">
+              <input
+                type="email"
+                placeholder="Email"
+                value={loginForm.email}
+                onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                autoComplete="email"
+                className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                autoComplete="current-password"
+                className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <button
+                onClick={handleLogin}
+                disabled={loading}
+                className="w-full px-12 py-4 bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white text-xl font-semibold rounded-lg hover:scale-105 transform transition-all duration-300 shadow-2xl hover:shadow-amber-500/50 border-2 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 disabled:opacity-50"
+              >
+                {loading ? 'Entering...' : 'Enter Sicko'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Username"
+                value={registerForm.username}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
+                autoComplete="username"
+                className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={registerForm.email}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
+                autoComplete="email"
+                className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={registerForm.password}
+                onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && termsAccepted && handleRegister()}
+                autoComplete="new-password"
+                className="w-full p-3 bg-black/40 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              
+              {/* Terms of Service Agreement */}
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3 p-4 bg-black/20 rounded-lg border border-slate-600/30">
+                  <input
+                    type="checkbox"
+                    id="terms-checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-amber-600 bg-black/40 border-slate-600 rounded focus:ring-amber-500 focus:ring-2"
+                  />
+                  <label htmlFor="terms-checkbox" className="text-slate-300 text-sm leading-relaxed">
+                    I have read and agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowTermsModal(true);
+                      }}
+                      className="relative inline-block font-medium transition-all duration-300 group"
+                    >
+                      {/* Main gradient text matching SICKOSCOOP */}
+                      <span className="bg-gradient-to-r from-orange-400 via-rose-400 via-pink-400 to-purple-400 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-rose-300 group-hover:via-pink-300 group-hover:to-purple-300 transition-all duration-300 font-semibold">
+                        terms of transparency, service and privacy policy
+                      </span>
+                      
+                      {/* Animated underline with same gradient */}
+                      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500/70 via-rose-500/70 via-pink-500/70 to-purple-500/70 transform scale-x-100 group-hover:scale-x-110 group-hover:from-orange-400 group-hover:via-rose-400 group-hover:via-pink-400 group-hover:to-purple-400 transition-transform duration-300"></div>
+                      
+                      {/* Subtle glow on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 via-rose-400/10 via-pink-400/10 to-purple-400/10 rounded opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 scale-110"></div>
+                    </button>
+
+                    {' '}including sickoscoop's mission to stop anonymous stalkers and promote genuine communication
+                  </label>
+                </div>
+                
+                {!termsAccepted && (
+                  <p className="text-xs text-slate-500">
+                    ✓ You must accept our terms to join the fight against anonymous stalkers
+                  </p>
+                )}
+              </div>
+              
+              <button
+                onClick={handleRegister}
+                disabled={loading || !termsAccepted}
+                className={`w-full px-12 py-4 text-xl font-semibold rounded-lg transition-all duration-300 shadow-2xl border-2 ${
+                  termsAccepted 
+                    ? 'bg-gradient-to-r from-gray-900 via-slate-800 to-black text-white hover:scale-105 border-amber-500/80 hover:border-amber-400 hover:from-gray-800 hover:via-slate-700 hover:to-gray-900 hover:shadow-amber-500/50' 
+                    : 'bg-slate-800/50 text-slate-500 border-slate-600/30 cursor-not-allowed'
+                } disabled:opacity-50`}
+              >
+                {loading ? 'Creating Account...' : 'Join Sicko'}
+              </button>
+            </div>
+          )}
+          
+          {/* UPDATED TOGGLE BUTTON */}
+          <button
+            onClick={() => {
+              setShowRegister(!showRegister);
+              // Reset terms acceptance when switching between login/register
+              setTermsAccepted(false);
+              // Clear any existing errors
+              setError('');
+            }}
+            className="mt-4 text-slate-300 hover:text-white transition-colors"
+          >
+            {showRegister ? 'Already have an account? Sign in' : 'Need an account? Register'}
           </button>
         </div>
-        
-        <div className="p-6 overflow-y-auto max-h-80">
-          <div className="space-y-6">
-            {/* User Info Section */}
-            {user && (
-              <div className="border-b border-slate-600/30 pb-4">
-                <h4 className="text-lg font-semibold text-white mb-3">Account</h4>
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-amber-500/80">
-                    {user.username?.slice(0, 2).toUpperCase() || 'YU'}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{user.username || 'Your Username'}</p>
-                    <p className="text-slate-400 text-sm">{user.email || 'your@email.com'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* About Section */}
-            <div className="border-b border-slate-600/30 pb-4">
-              <h4 className="text-lg font-semibold text-white mb-3">About SickoScoop</h4>
-              <p className="text-slate-300 text-sm mb-3">
-                SickoScoop is a social platform built for genuine communication and transparency. 
-                We believe in creating safe spaces where people can share without fear of stalking or harassment.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-slate-400 text-xs">Anti-Stalker Protection</span>
+        {/* UPDATED FEATURE CARDS WITH PDF LINKS */}
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
+          {[
+            { 
+              icon: (
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-300 via-indigo-400 to-violet-500 rounded-full opacity-80 blur-sm"></div>
+                  <div className="absolute inset-1 bg-gradient-to-tr from-orange-300 via-orange-400 to-blue-500 rounded-full opacity-90 animate-pulse"></div>
+                  <div className="absolute inset-2 bg-gradient-to-bl from-blue-300 via-purple-400 to-indigo-500 rounded-full opacity-70"></div>
+                  <div className="absolute inset-3 bg-gradient-to-tl from-orange-300 via-purple-300 to-blue-400 rounded-full animate-pulse"></div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-slate-400 text-xs">PDF Watermarking & Tracking</span>
+              ), 
+              title: 'Anti-Stalker Protection', 
+              desc: 'Advanced privacy controls' 
+            },
+            { 
+              icon: (
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-300 via-indigo-400 to-violet-500 transform rotate-45 opacity-80 blur-sm"></div>
+                  <div className="absolute inset-1 bg-gradient-to-tr from-orange-300 via-orange-400 to-blue-500 transform rotate-45 opacity-90 animate-pulse"></div>
+                  <div className="absolute inset-2 bg-gradient-to-bl from-blue-300 via-purple-400 to-indigo-500 transform rotate-45 opacity-70"></div>
+                  <div className="absolute inset-3 bg-gradient-to-tl from-orange-300 via-purple-300 to-blue-400 transform rotate-45 animate-pulse"></div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-slate-400 text-xs">Genuine Community Building</span>
+              ), 
+              title: 'Decency', 
+              desc: 'No anonymous trolls' 
+            },
+            { 
+              icon: (
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 bg-gradient-to-br from-violet-400 via-purple-500 to-indigo-600 opacity-80 blur-sm" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
+                  <div className="absolute inset-1 bg-gradient-to-tr from-orange-400 via-blue-700 to-amber-500 opacity-90 animate-pulse" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
+                  <div className="absolute inset-2 bg-gradient-to-bl from-teal-400 via-cyan-500 to-blue-600 opacity-70" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
+                  <div className="absolute inset-3 bg-gradient-to-tl from-blue-900 via-indigo-800 to-slate-800 animate-pulse" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}></div>
                 </div>
+              ), 
+              title: 'Genuine Community', 
+              desc: 'Keeping everyone safe' 
+            }
+          ].map((feature, idx) => (
+            <a
+              key={idx}
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-slate-600/30 hover:bg-black/30 transition-all duration-300 cursor-pointer hover:scale-105 hover:border-amber-500/50 group block"
+              >
+              <div className="inline-block border-2 border-amber-500/80 rounded-lg p-3 mb-4 bg-black/30 group-hover:border-amber-400 group-hover:bg-black/50 transition-all duration-300">
+                {feature.icon}
               </div>
-            </div>
-
-            {/* Privacy & Security */}
-            <div className="border-b border-slate-600/30 pb-4">
-              <h4 className="text-lg font-semibold text-white mb-3">Privacy & Security</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-sm">Privacy Score</span>
-                  <span className="text-green-400 text-sm font-semibold">{user?.privacyScore || 94}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-sm">Transparency</span>
-                  <span className="text-blue-400 text-sm font-semibold">{user?.transparencyScore || 98}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-sm">Community Score</span>
-                  <span className="text-purple-400 text-sm font-semibold">{user?.communityScore || 96}%</span>
-                </div>
+              <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-amber-200 transition-colors duration-300">
+                {feature.title}
+              </h3>
+              <p className="text-slate-300 group-hover:text-slate-200 transition-colors duration-300">
+                {feature.desc}
+              </p>
+              
+              {/* Clickable indicator */}
+              <div className="mt-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-xs text-amber-400 flex items-center space-x-1">
+                  <span>📄</span>
+                  <span>View Details (PDF)</span>
+                </span>
               </div>
-            </div>
+            </a>
+          ))}
+        </div>
 
-            {/* Copyright */}
-            <div className="text-center pt-2">
-              <p className="text-slate-400 text-sm font-medium">
-                © 2025 SickoScoop. All rights reserved.
-              </p>
-              <p className="text-slate-500 text-xs mt-1">
-                Version 3.0 • Building safer social connections
-              </p>
-            </div>
+        {/* Copyright Notice */}
+        <div className="mt-16 pt-8 border-t border-slate-600/30 w-full max-w-4xl">
+          <div className="text-center">
+            <p className="text-slate-400 text-sm">
+              © 2025 SickoScoop. All rights reserved.
+            </p>
+            <p className="text-slate-500 text-xs mt-2">
+              Building genuine connections through transparency and safety.
+            </p>
           </div>
         </div>
       </div>
+
+      {/* TERMS OF SERVICE MODAL */}
+      <TermsOfServiceModal 
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setTermsAccepted(true);
+          setShowTermsModal(false);
+        }}
+      />
     </div>
   );
 });
