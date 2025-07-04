@@ -1120,6 +1120,30 @@ const LandingPage = React.memo(({
           ))}
         </div>
 
+{/* Support Us Button */}
+        <div className="mt-16 flex justify-center">
+          <button
+            onClick={() => window.open('https://www.gofundme.com/f/StopStalkers', '_blank')}
+            className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-slate-600/30 hover:bg-black/30 transition-all duration-300 cursor-pointer hover:scale-105 hover:border-blue-500/50 group w-full max-w-sm"
+          >
+            <div className="inline-block border-2 border-blue-500/80 rounded-lg p-3 mb-4 bg-black/30 group-hover:border-blue-400 group-hover:bg-black/50 transition-all duration-300">
+              <SSLogo size="default" className="group-hover:scale-110 transition-transform duration-300" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-blue-200 transition-colors duration-300">
+              Support Us
+            </h3>
+            <p className="text-slate-300 group-hover:text-slate-200 transition-colors duration-300">
+              stop stalkers
+            </p>
+            
+            {/* Clickable indicator */}
+            <div className="mt-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <span className="text-xs text-blue-400 flex items-center space-x-1">
+              </span>
+            </div>
+          </button>
+        </div>
+
         {/* Copyright Notice */}
         <div className="mt-16 pt-8 border-t border-slate-600/30 w-full max-w-4xl">
           <div className="text-center">
