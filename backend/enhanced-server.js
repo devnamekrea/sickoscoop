@@ -226,6 +226,17 @@ const getSpacesConfig = () => {
 const spacesConfig = getSpacesConfig();
 let s3 = null;
 
+// ADD THIS MONGODB DEBUG CODE HERE:
+console.log('🔍 MONGODB_URI Debug:');
+console.log('  - Is set:', !!process.env.MONGODB_URI);
+console.log('  - Length:', process.env.MONGODB_URI?.length || 0);
+console.log('  - First 30 chars:', process.env.MONGODB_URI?.substring(0, 30) || 'undefined');
+console.log('  - Starts with mongodb:', process.env.MONGODB_URI?.startsWith('mongodb'));
+console.log('  - Full URI:', process.env.MONGODB_URI || 'NOT_SET');
+
+if (spacesConfig.isConfigured) {
+  // ... rest of your code
+  
 if (spacesConfig.isConfigured) {
   const spacesEndpoint = new AWS.Endpoint(spacesConfig.endpoint);
   s3 = new AWS.S3({
@@ -659,20 +670,6 @@ const upload = multer({
     cb(null, true);
   }
 });
-
-const spacesConfig = getSpacesConfig();
-let s3 = null;
-
-// ADD THIS MONGODB DEBUG CODE HERE:
-console.log('🔍 MONGODB_URI Debug:');
-console.log('  - Is set:', !!process.env.MONGODB_URI);
-console.log('  - Length:', process.env.MONGODB_URI?.length || 0);
-console.log('  - First 30 chars:', process.env.MONGODB_URI?.substring(0, 30) || 'undefined');
-console.log('  - Starts with mongodb:', process.env.MONGODB_URI?.startsWith('mongodb'));
-console.log('  - Full URI:', process.env.MONGODB_URI || 'NOT_SET');
-
-if (spacesConfig.isConfigured) {
-  // ... rest of your code
 
 // Database Connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickoscoop';
