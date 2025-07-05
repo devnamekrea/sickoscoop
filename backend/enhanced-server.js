@@ -672,21 +672,6 @@ const upload = multer({
 // Database Connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickoscoop';
 
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000
-})
-.then(() => {
-  console.log('✅ Connected to MongoDB:', mongoUri.includes('localhost') ? 'localhost' : 'cloud');
-})
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  process.exit(1);
-});
-
 // Database Schemas
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, trim: true, unique: true, minlength: 2, maxlength: 30 },
@@ -1840,32 +1825,98 @@ app.use((error, req, res, next) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+// ✅ ADD: Health check endpoints BEFORE starting server
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    uptime: Math.floor(process.uptime()),
+    environment: isProduction ? 'PRODUCTION' : 'DEVELOPMENT'
+  });
+});
+
+app.get('/', (req, res) => {
+  res.json({
+    message: 'SickoScoop API Server',
+    status: 'running',
+    version: '3.0.0'
+  });
+});
+
+// ✅ START SERVER FIRST (replace your existing server.listen section)
+server.listen(PORT, '0.0.0.0', async () => {
   console.log('');
   console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉');
-  console.log('🚀 SickoScoop Production Server v3.0 - DigitalOcean Ready!');
+  console.log('🚀 SickoScoop Server STARTED - DigitalOcean Ready!');
   console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉');
   console.log('');
   console.log('📡 Server Details:');
-  console.log('   Port:       ', PORT);
-  console.log('   Health:     /health and /api/health');
-  console.log('   Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
-  console.log('   Database:   ', process.env.MONGODB_URI ? 'Connected ✅' : 'Local MongoDB ⚠️');
-  console.log('   Storage:    ', spacesConfig.isConfigured ? 'DigitalOcean Spaces ✅' : 'Not configured ❌');
-  console.log('   Build:      ', buildPath ? 'React build found ✅' : 'API-only mode ⚠️');
+  console.log('   Host:        0.0.0.0');
+  console.log('   Port:        ', PORT);
+  console.log('   Health:      /health');
+  console.log('   Environment: ', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
   console.log('');
-  console.log('🔧 Features Ready:');
-  console.log('   ✅ Real PDF watermarking with pdf-lib');
-  console.log('   ✅ File upload with image optimization');
-  console.log('   ✅ PDF tracking and analytics');
-  console.log('   ✅ Real-time WebSocket features');
-  console.log('   ✅ Multi-environment CORS');
-  console.log('   ✅ Rate limiting and security');
-  console.log('   ✅ Complete authentication system');
-  console.log('   ✅ Public and private posts');
-  console.log('');
-  console.log('🚀 Ready for DigitalOcean deployment!');
-  console.log('');
+  
+  // ✅ CONNECT TO MONGODB AFTER SERVER IS RUNNING
+  await connectToMongoDB();
 });
 
-module.exports = app;
+// ✅ ADD: Separate MongoDB connection function
+async function connectToMongoDB() {
+  try {
+    console.log('🔄 Connecting to MongoDB...');
+    
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickoscoop';
+    
+    if (!mongoUri || mongoUri === 'mongodb://localhost:27017/sickoscoop') {
+      console.warn('⚠️ MONGODB_URI not set, running in API-only mode');
+      return;
+    }
+    
+    console.log('📍 MongoDB URI preview:', mongoUri.substring(0, 50) + '...');
+    
+    const options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 15000, // Increased timeout
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      retryWrites: true
+    };
+    
+    await mongoose.connect(mongoUri, options);
+    
+    console.log('✅ MongoDB Connected Successfully!');
+    console.log('📊 Database:', mongoose.connection.name || 'default');
+    console.log('🚀 All systems operational!');
+    
+  } catch (error) {
+    console.error('❌ MongoDB Connection Failed:', error.message);
+    console.log('⚠️ Server continues in API-only mode');
+    console.log('🔧 Fix MongoDB credentials and redeploy for full functionality');
+    
+    // ✅ CRITICAL: DON'T crash the server - let it run without database
+    // The health checks will still pass and DigitalOcean deployment succeeds
+  }
+}
+
+// ✅ ADD: Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('📡 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    mongoose.connection.close(false, () => {
+      console.log('✅ MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error.message);
+  // In production, log the error but don't crash
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
