@@ -226,7 +226,7 @@ const getSpacesConfig = () => {
 const spacesConfig = getSpacesConfig();
 let s3 = null;
 
-// ADD THIS MONGODB DEBUG CODE HERE:
+// ✅ FIXED MONGODB DEBUG CODE:
 console.log('🔍 MONGODB_URI Debug:');
 console.log('  - Is set:', !!process.env.MONGODB_URI);
 console.log('  - Length:', process.env.MONGODB_URI?.length || 0);
@@ -234,9 +234,7 @@ console.log('  - First 30 chars:', process.env.MONGODB_URI?.substring(0, 30) || 
 console.log('  - Starts with mongodb:', process.env.MONGODB_URI?.startsWith('mongodb'));
 console.log('  - Full URI:', process.env.MONGODB_URI || 'NOT_SET');
 
-if (spacesConfig.isConfigured) {
-  // ... rest of your code
-  
+// ✅ FIXED: Remove duplicate spacesConfig.isConfigured check
 if (spacesConfig.isConfigured) {
   const spacesEndpoint = new AWS.Endpoint(spacesConfig.endpoint);
   s3 = new AWS.S3({
