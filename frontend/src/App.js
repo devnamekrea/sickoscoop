@@ -207,10 +207,19 @@ console.log('🌐 Environment Detection:', {
 
 // Enhanced URL generation for posts
 const generatePostUrl = (postId) => {
-  const baseUrl = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000'
-    : 'https://sickoscoop.netlify.app';
-  return `${baseUrl}/post/${postId}`;
+  const hostname = window.location.hostname;
+  
+  // Use the actual current domain
+  if (hostname === 'sickoscoop.com' || hostname === 'www.sickoscoop.com') {
+    return `https://sickoscoop.com/post/${postId}`;
+  } else if (hostname.includes('vercel.app')) {
+    return `https://sickoscoop.vercel.app/post/${postId}`;
+  } else if (hostname === 'localhost') {
+    return `http://localhost:3000/post/${postId}`;
+  }
+  
+  // Fallback to current origin
+  return `${window.location.origin}/post/${postId}`;
 };
 
 // Enhanced timestamp function with more details
