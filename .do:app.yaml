@@ -1,5 +1,5 @@
 name: sickoscoop
-region: sfo3
+region: sfo
 
 services:
   - name: backend
@@ -47,37 +47,30 @@ services:
       - key: PORT
         value: "8080"
       - key: MONGODB_URI
-        value: ${sickoscoop-db.DATABASE_URL}
+        value: mongodb+srv://namekreator-user:fEOzjDe85qkuamrE@cluster0.soprv0r.mongodb.net/sickoscoop?retryWrites=true&w=majority&appName=Cluster0
         type: SECRET
       - key: JWT_SECRET
-        value: your-super-secure-jwt-secret-minimum-32-characters-long
+        value: 4208212352a8353dab72153f1542027785b176c71ea3b4d045035f04ca3caae7718b9ffce777328719170e67e1b642b8b4feb21bf2a7b87b9fbaf3d1588f8270
         type: SECRET
       - key: DO_SPACES_KEY
-        value: your_spaces_access_key
+        value: DO8014CL6J8LU9GJM29B
         type: SECRET
       - key: DO_SPACES_SECRET
-        value: your_spaces_secret_key
+        value: NldtL2Fq2H5dzdBB6rD+Cf6xDImRiiFG6gdmIibX5gU
         type: SECRET
       - key: DO_SPACES_BUCKET
-        value: your-bucket-name
+        value: sickoscoop-media
         type: SECRET
       - key: DO_SPACES_REGION
-        value: sfo3
+        value: sfo2
       - key: DO_SPACES_ENDPOINT
-        value: sfo3.digitaloceanspaces.com
+        value: sfo2.digitaloceanspaces.com
       - key: FRONTEND_URL
         value: ${APP_DOMAIN}
       - key: TRACKING_DOMAIN
         value: ${APP_DOMAIN}
       - key: TRACKING_URL
         value: https://${APP_DOMAIN}
-
-databases:
-  - name: sickoscoop-db
-    engine: MONGODB
-    version: "5"
-    size: db-s-1vcpu-1gb
-    num_nodes: 1
 
 alerts:
   - rule: DEPLOYMENT_FAILED

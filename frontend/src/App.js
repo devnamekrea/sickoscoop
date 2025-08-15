@@ -2701,6 +2701,13 @@ export default function App() {
   const [apiStatus, setApiStatus] = useState('checking');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+// Chat Features State
+  const [chatFeatures, setChatFeatures] = useState({
+    chatEnabled: false,
+    bsvChatEnabled: false,
+    isBetaUser: false
+  });
+
   // Login/Register forms
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
@@ -2732,6 +2739,29 @@ export default function App() {
       setCurrentView('landing');
     }
   }, []);
+
+// Check chat feature flags when user logs in
+  useEffect(() => {
+    const checkChatFeatures = async () => {
+      if (isLoggedIn) {
+        try {
+          console.log('🔍 Checking chat features...');
+          const features = await apiRequest('/features');
+          setChatFeatures(features);
+          console.log('✅ Chat features loaded:', features);
+        } catch (error) {
+          console.error('❌ Error checking chat features:', error);
+          setChatFeatures({
+            chatEnabled: false,
+            bsvChatEnabled: false,
+            isBetaUser: false
+          });
+        }
+      }
+    };
+    
+    checkChatFeatures();
+  }, [isLoggedIn]);
 
   const checkApiStatus = async () => {
     try {

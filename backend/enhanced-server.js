@@ -52,6 +52,21 @@ console.log('🌐 Environment Detection:', {
   mongoUri: process.env.MONGODB_URI ? 'Configured' : 'Using localhost'
 });
 
+// ===== BSV CHAT FEATURE FLAGS =====
+
+// Feature Flags Configuration
+const CHAT_FEATURE_FLAGS = {
+  CHAT_ENABLED: process.env.CHAT_ENABLED === 'true' || false,
+  BSV_CHAT_ENABLED: process.env.BSV_CHAT_ENABLED === 'true' || false,
+  CHAT_BETA_USERS: (process.env.CHAT_BETA_USERS || '').split(',').filter(Boolean).map(email => email.trim())
+};
+
+console.log('🔧 Chat Feature Flags:', {
+  chatEnabled: CHAT_FEATURE_FLAGS.CHAT_ENABLED,
+  bsvEnabled: CHAT_FEATURE_FLAGS.BSV_CHAT_ENABLED,
+  betaUsers: CHAT_FEATURE_FLAGS.CHAT_BETA_USERS.length
+});
+
 // Compression and Security
 app.use(compression());
 
@@ -752,6 +767,168 @@ const pdfTrackingSchema = new mongoose.Schema({
   }]
 });
 
+// ===== BSV CHAT SCHEMAS =====
+
+// Private Handle Schema - Multiple handles per verified user
+const privateHandleSchema = new mongoose.Schema({
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
+    index: true 
+  },
+  handle: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    index: true 
+  },
+  handleType: {
+    type: String,
+    enum: ['active', 'backup', 'revoked'],
+    default: 'active'
+  },
+  // BSV Security for Handle
+  handleSignature: { type: String }, // BSV signature proving ownership
+  handleHash: { type: String }, // Hash for integrity verification
+  
+  // Privacy & Sharing Controls
+  sharedWith: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    sharedAt: { type: Date, default: Date.now },
+    sharedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    canReshare: { type: Boolean, default: false },
+    notes: { type: String }
+  }],
+  
+  // Usage Tracking (for liability)
+  usageHistory: [{
+    usedAt: { type: Date, default: Date.now },
+    action: { type: String },
+    withUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    messageHash: { type: String }
+  }],
+  
+  // Liability & Transparency
+  createdAt: { type: Date, default: Date.now },
+  lastUsed: { type: Date, default: Date.now },
+  isLiable: { type: Boolean, default: true },
+  auditTrail: [{
+    timestamp: { type: Date, default: Date.now },
+    action: { type: String },
+    evidence: { type: String }
+  }]
+});
+
+// Chat Schema - Private conversations between verified users
+const chatSchema = new mongoose.Schema({
+  participants: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User',
+    required: true 
+  }],
+  chatType: { 
+    type: String, 
+    enum: ['direct', 'group'], 
+    default: 'direct' 
+  },
+  lastMessage: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'ChatMessage' 
+  },
+  lastActivity: { 
+    type: Date, 
+    default: Date.now,
+    index: -1 
+  },
+  // BSV Security Fields
+  chatHash: { type: String },
+  bsvVerified: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Chat Message Schema with BSV Integration
+const chatMessageSchema = new mongoose.Schema({
+  chatId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Chat', 
+    required: true,
+    index: true 
+  },
+  senderId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  content: { 
+    type: String, 
+    required: true 
+  },
+  // Handle-based privacy
+  senderHandle: { type: String, required: true },
+  senderHandleId: { type: mongoose.Schema.Types.ObjectId, ref: 'PrivateHandle' },
+  recipientHandle: { type: String },
+  
+  // BSV Security Fields
+  bsvSignature: { type: String },
+  bsvPublicKey: { type: String },
+  messageHash: { type: String },
+  isVerified: { type: Boolean, default: false },
+  tamperedDetected: { type: Boolean, default: false },
+  surveillanceAlert: { type: Boolean, default: false },
+  
+  // Privacy Fields (not anonymity - users are identifiable)
+  readBy: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    readAt: { type: Date, default: Date.now }
+  }],
+  
+  // Liability Trail
+  realSenderVerified: { type: Boolean, default: true },
+  handleVerified: { type: Boolean, default: false },
+  
+  createdAt: { type: Date, default: Date.now, index: -1 }
+});
+
+// User BSV Keys Schema - Tied to real user accounts
+const userBSVSchema = new mongoose.Schema({
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
+    unique: true,
+    index: true 
+  },
+  bsvPrivateKey: { type: String, required: true }, // Encrypted
+  bsvPublicKey: { type: String, required: true },
+  bsvAddress: { type: String, required: true, unique: true },
+  createdAt: { type: Date, default: Date.now },
+  lastUsed: { type: Date, default: Date.now }
+});
+
+// Handle Sharing Log - Complete transparency
+const handleSharingSchema = new mongoose.Schema({
+  fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  handleId: { type: mongoose.Schema.Types.ObjectId, ref: 'PrivateHandle', required: true },
+  handle: { type: String, required: true },
+  sharedAt: { type: Date, default: Date.now, index: -1 },
+  reason: { type: String },
+  bsvProof: { type: String },
+  isActive: { type: Boolean, default: true },
+  revokedAt: { type: Date },
+  revokedReason: { type: String }
+});
+
+// Create models
+const PrivateHandle = mongoose.model('PrivateHandle', privateHandleSchema);
+const Chat = mongoose.model('Chat', chatSchema);
+const ChatMessage = mongoose.model('ChatMessage', chatMessageSchema);
+const UserBSV = mongoose.model('UserBSV', userBSVSchema);
+const HandleSharing = mongoose.model('HandleSharing', handleSharingSchema);
+
+console.log('✅ BSV Chat schemas loaded');
+
 const User = mongoose.model('User', userSchema);
 const Post = mongoose.model('Post', postSchema);
 const PDFTracking = mongoose.model('PDFTracking', pdfTrackingSchema);
@@ -890,6 +1067,46 @@ app.get('/api/health', async (req, res) => {
     }
   });
 });
+
+// ===== CHAT FEATURE FLAG ENDPOINT =====
+
+// Feature flag endpoint - Check what chat features user can access
+app.get('/api/features', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const isBetaUser = CHAT_FEATURE_FLAGS.CHAT_BETA_USERS.includes(userEmail);
+    
+    console.log('🔍 Feature check for:', {
+      username: req.user.username,
+      email: userEmail,
+      isBetaUser,
+      chatEnabled: CHAT_FEATURE_FLAGS.CHAT_ENABLED || isBetaUser,
+      bsvEnabled: CHAT_FEATURE_FLAGS.BSV_CHAT_ENABLED || isBetaUser
+    });
+    
+    res.json({
+      chatEnabled: CHAT_FEATURE_FLAGS.CHAT_ENABLED || isBetaUser,
+      bsvChatEnabled: CHAT_FEATURE_FLAGS.BSV_CHAT_ENABLED || isBetaUser,
+      isBetaUser,
+      features: {
+        privateHandles: isBetaUser,
+        bsvSecurity: isBetaUser,
+        surveillanceDetection: isBetaUser
+      },
+      message: isBetaUser ? 'Beta features enabled' : 'Standard features only'
+    });
+  } catch (error) {
+    console.error('Feature flag error:', error);
+    res.status(500).json({ 
+      chatEnabled: false,
+      bsvChatEnabled: false,
+      isBetaUser: false,
+      error: 'Feature check failed'
+    });
+  }
+});
+
+console.log('✅ Chat feature flags endpoint added');
 
 // File Upload Endpoint
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
