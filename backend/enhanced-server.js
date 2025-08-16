@@ -17,6 +17,8 @@ const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const bsv = require('bsv');                 
+const crypto = require('crypto-js');             
 require('dotenv').config();
 
 const app = express();
@@ -654,6 +656,136 @@ class FileProcessor {
 }
 
 const fileProcessor = new FileProcessor();
+
+// ===== BSV SERVICE CLASS =====
+class BSVService {
+  constructor() {
+    this.networkType = process.env.BSV_NETWORK || 'mainnet';
+    this.encryptionKey = process.env.BSV_ENCRYPTION_KEY || 'fallback-encryption-key-change-this';
+    this.seedSecret = process.env.BSV_SEED_SECRET || 'fallback-seed-secret-change-this-to-128-chars';
+    
+    console.log('🔐 BSVService initialized:', {
+      network: this.networkType,
+      hasEncryptionKey: !!process.env.BSV_ENCRYPTION_KEY,
+      hasSeedSecret: !!process.env.BSV_SEED_SECRET
+    });
+  }
+
+  // Generate deterministic BSV keys for a user
+  generateKeys(userId, userEmail) {
+    try {
+      console.log('🔑 Generating BSV keys for user:', userId.toString().substring(0, 8) + '...');
+      
+      // Create deterministic seed from user ID + secret
+      const seedInput = `${userId}-${userEmail}-${this.seedSecret}`;
+      const seedHash = crypto.SHA256(seedInput).toString();
+      
+      // Generate private key from seed
+      const privateKey = bsv.PrivateKey.fromSeed(Buffer.from(seedHash, 'hex'));
+      const publicKey = privateKey.toPublicKey();
+      const address = privateKey.toAddress();
+      
+      console.log('✅ BSV keys generated successfully:', {
+        userId: userId.toString().substring(0, 8) + '...',
+        publicKey: publicKey.toString().substring(0, 20) + '...',
+        address: address.toString()
+      });
+      
+      return {
+        privateKey: privateKey.toString(),
+        publicKey: publicKey.toString(),
+        address: address.toString(),
+        seedHash: seedHash.substring(0, 16)
+      };
+    } catch (error) {
+      console.error('❌ BSV key generation failed:', error);
+      throw new Error('Failed to generate BSV keys: ' + error.message);
+    }
+  }
+
+  // Encrypt private key for secure storage
+  encryptPrivateKey(privateKeyString) {
+    try {
+      const encrypted = crypto.AES.encrypt(privateKeyString, this.encryptionKey).toString();
+      console.log('🔒 Private key encrypted for storage');
+      return encrypted;
+    } catch (error) {
+      console.error('❌ Private key encryption failed:', error);
+      throw new Error('Failed to encrypt private key');
+    }
+  }
+
+  // Decrypt private key for use
+  decryptPrivateKey(encryptedPrivateKey) {
+    try {
+      const decrypted = crypto.AES.decrypt(encryptedPrivateKey, this.encryptionKey).toString(crypto.enc.Utf8);
+      console.log('🔓 Private key decrypted for use');
+      return decrypted;
+    } catch (error) {
+      console.error('❌ Private key decryption failed:', error);
+      throw new Error('Failed to decrypt private key');
+    }
+  }
+
+  // Sign a message with BSV private key
+  signMessage(message, privateKeyString) {
+    try {
+      console.log('✍️ Signing message with BSV key...');
+      
+      const privateKey = bsv.PrivateKey.fromString(privateKeyString);
+      const messageHash = bsv.crypto.Hash.sha256(Buffer.from(message, 'utf8'));
+      const signature = bsv.crypto.ECDSA.sign(messageHash, privateKey);
+      
+      const signatureData = {
+        message: message,
+        signature: signature.toString(),
+        publicKey: privateKey.toPublicKey().toString(),
+        timestamp: new Date().toISOString(),
+        messageHash: messageHash.toString('hex')
+      };
+      
+      console.log('✅ Message signed successfully');
+      return signatureData;
+    } catch (error) {
+      console.error('❌ Message signing failed:', error);
+      throw new Error('Failed to sign message: ' + error.message);
+    }
+  }
+
+  // Verify a message signature
+  verifyMessage(message, signature, publicKeyString) {
+    try {
+      console.log('🔍 Verifying message signature...');
+      
+      const publicKey = bsv.PublicKey.fromString(publicKeyString);
+      const messageHash = bsv.crypto.Hash.sha256(Buffer.from(message, 'utf8'));
+      const sig = bsv.crypto.Signature.fromString(signature);
+      
+      const isValid = bsv.crypto.ECDSA.verify(messageHash, sig, publicKey);
+      
+      console.log('🔍 Signature verification result:', { isValid });
+      
+      return {
+        isValid,
+        messageHash: messageHash.toString('hex'),
+        verifiedAt: new Date().toISOString(),
+        publicKey: publicKeyString
+      };
+    } catch (error) {
+      console.error('❌ Message verification failed:', error);
+      return {
+        isValid: false,
+        error: error.message,
+        verifiedAt: new Date().toISOString()
+      };
+    }
+  }
+}
+
+// Initialize BSV service
+const bsvService = new BSVService();
+
+console.log('🚀 BSV Services initialized successfully');
 
 // Multer Configuration
 const upload = multer({
@@ -1957,6 +2089,242 @@ app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
     });
   }
 });
+
+// ===== BSV CHAT API ENDPOINTS =====
+
+// Initialize BSV keys for a user
+app.post('/api/chat/init-bsv', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔑 BSV initialization request from:', req.user.username);
+    
+    // Check if user already has BSV keys
+    const existingBSV = await UserBSV.findOne({ userId: req.user._id || req.user.id });
+    if (existingBSV) {
+      console.log('📋 User already has BSV keys');
+      return res.json({
+        message: 'BSV keys already initialized',
+        bsvAddress: existingBSV.bsvAddress,
+        publicKey: existingBSV.bsvPublicKey,
+        createdAt: existingBSV.createdAt,
+        hasKeys: true
+      });
+    }
+    
+    // Generate new BSV keys
+    const userId = req.user._id || req.user.id;
+    const userEmail = req.user.email;
+    
+    const bsvKeys = bsvService.generateKeys(userId, userEmail);
+    
+    // Encrypt private key for storage
+    const encryptedPrivateKey = bsvService.encryptPrivateKey(bsvKeys.privateKey);
+    
+    // Save to database
+    const userBSVRecord = new UserBSV({
+      userId: userId,
+      bsvPrivateKey: encryptedPrivateKey,
+      bsvPublicKey: bsvKeys.publicKey,
+      bsvAddress: bsvKeys.address,
+      createdAt: new Date(),
+      lastUsed: new Date()
+    });
+    
+    await userBSVRecord.save();
+    
+    console.log('✅ BSV keys initialized and saved');
+    
+    res.json({
+      message: 'BSV keys initialized successfully',
+      bsvAddress: bsvKeys.address,
+      publicKey: bsvKeys.publicKey,
+      createdAt: userBSVRecord.createdAt,
+      hasKeys: true
+    });
+    
+  } catch (error) {
+    console.error('❌ BSV initialization failed:', error);
+    res.status(500).json({
+      message: 'BSV initialization failed',
+      error: error.message,
+      hasKeys: false
+    });
+  }
+});
+
+// Get BSV status for current user
+app.get('/api/chat/bsv-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    
+    console.log('📊 BSV status request from:', req.user.username);
+    
+    // Check BSV keys
+    const userBSV = await UserBSV.findOne({ userId });
+    const hasBSVKeys = !!userBSV;
+    
+    const status = {
+      hasBSVKeys,
+      bsvAddress: userBSV?.bsvAddress,
+      bsvKeysCreated: userBSV?.createdAt,
+      isReady: hasBSVKeys,
+      nextSteps: []
+    };
+    
+    // Provide next steps guidance
+    if (!hasBSVKeys) {
+      status.nextSteps.push({
+        action: 'INIT_BSV',
+        description: 'Initialize BSV cryptographic keys',
+        endpoint: '/api/chat/init-bsv'
+      });
+    }
+    
+    console.log('📊 BSV status retrieved:', {
+      user: req.user.username,
+      hasBSVKeys,
+      isReady: status.isReady
+    });
+    
+    res.json({
+      message: 'BSV status retrieved successfully',
+      ...status
+    });
+    
+  } catch (error) {
+    console.error('❌ BSV status check failed:', error);
+    res.status(500).json({
+      message: 'BSV status check failed',
+      error: error.message
+    });
+  }
+});
+
+// Sign a message with BSV (for testing and message creation)
+app.post('/api/chat/sign-message', authenticateToken, async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    console.log('✍️ Message signing request:', {
+      user: req.user.username,
+      messageLength: message?.length
+    });
+    
+    if (!message) {
+      return res.status(400).json({
+        message: 'Message is required',
+        error: 'MISSING_MESSAGE'
+      });
+    }
+    
+    const userId = req.user._id || req.user.id;
+    
+    // Get user's BSV keys
+    const userBSV = await UserBSV.findOne({ userId });
+    if (!userBSV) {
+      return res.status(400).json({
+        message: 'BSV keys not found. Please initialize BSV keys first.',
+        error: 'BSV_KEYS_REQUIRED'
+      });
+    }
+    
+    // Decrypt private key
+    const privateKey = bsvService.decryptPrivateKey(userBSV.bsvPrivateKey);
+    
+    // Sign the message
+    const signature = bsvService.signMessage(message, privateKey);
+    
+    console.log('✅ Message signed successfully:', {
+      user: req.user.username,
+      signatureLength: signature.signature.length
+    });
+    
+    res.json({
+      message: 'Message signed successfully',
+      signature: signature.signature,
+      publicKey: signature.publicKey,
+      messageHash: signature.messageHash,
+      timestamp: signature.timestamp,
+      bsvAddress: userBSV.bsvAddress
+    });
+    
+  } catch (error) {
+    console.error('❌ Message signing failed:', error);
+    res.status(500).json({
+      message: 'Message signing failed',
+      error: error.message
+    });
+  }
+});
+
+// Verify a message signature (for surveillance detection)
+app.post('/api/chat/verify-message', authenticateToken, async (req, res) => {
+  try {
+    const { message, signature, publicKey, senderUsername } = req.body;
+    
+    console.log('🔍 Message verification request:', {
+      verifiedBy: req.user.username,
+      senderUsername,
+      messageLength: message?.length,
+      hasSignature: !!signature
+    });
+    
+    if (!message || !signature || !publicKey) {
+      return res.status(400).json({
+        message: 'Message, signature, and public key are required',
+        error: 'MISSING_PARAMETERS'
+      });
+    }
+    
+    // Verify the signature
+    const verification = bsvService.verifyMessage(message, signature, publicKey);
+    
+    // If sender username provided, verify it matches the public key
+    let senderVerification = null;
+    if (senderUsername) {
+      const senderUser = await User.findOne({ username: senderUsername });
+      if (senderUser) {
+        const senderBSV = await UserBSV.findOne({ userId: senderUser._id });
+        if (senderBSV && senderBSV.bsvPublicKey === publicKey) {
+          senderVerification = {
+            senderVerified: true,
+            senderUsername,
+            publicKeyMatch: true
+          };
+        } else {
+          senderVerification = {
+            senderVerified: false,
+            senderUsername,
+            publicKeyMatch: false,
+            suspiciousActivity: true
+          };
+        }
+      }
+    }
+    
+    console.log('🔍 Message verification result:', {
+      isValid: verification.isValid,
+      senderVerified: senderVerification?.senderVerified,
+      suspiciousActivity: senderVerification?.suspiciousActivity || !verification.isValid
+    });
+    
+    res.json({
+      message: verification.isValid ? 'Message verified successfully' : 'Message verification failed',
+      ...verification,
+      senderVerification,
+      surveillanceAlert: !verification.isValid || senderVerification?.suspiciousActivity
+    });
+    
+  } catch (error) {
+    console.error('❌ Message verification failed:', error);
+    res.status(500).json({
+      message: 'Message verification failed',
+      error: error.message,
+      surveillanceAlert: true
+    });
+  }
+});
+
+console.log('🔗 BSV Chat API endpoints added successfully');
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
