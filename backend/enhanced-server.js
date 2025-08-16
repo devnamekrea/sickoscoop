@@ -681,7 +681,7 @@ class BSVService {
       const seedHash = crypto.SHA256(seedInput).toString();
       
       // Generate private key from seed
-      const privateKey = bsv.PrivateKey.fromSeed(Buffer.from(seedHash, 'hex'));
+      const privateKey = new bsv.PrivateKey(Buffer.from(seedHash, 'hex'));
       const publicKey = privateKey.toPublicKey();
       const address = privateKey.toAddress();
       
