@@ -2093,6 +2093,24 @@ app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
 // ===== BSV CHAT API ENDPOINTS WITH ERROR PROTECTION =====
 
 try {
+console.log('🔧 About to register BSV Chat endpoints...');
+
+// Test if BSV service is working
+try {
+  console.log('✅ Testing BSV service...');
+  console.log('BSV service type:', typeof bsvService);
+  console.log('BSV service methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(bsvService)));
+  
+  // Test BSV library
+  console.log('BSV library loaded:', !!bsv);
+  console.log('BSV PrivateKey available:', !!bsv.PrivateKey);
+  
+} catch (testError) {
+  console.error('❌ BSV service test failed:', testError);
+}
+
+console.log('🔧 Starting BSV endpoint registration...');
+
   console.log('🔗 Registering BSV Chat endpoints...');
   
   // Test BSV service first
@@ -2149,15 +2167,9 @@ try {
         hasKeys: true
       });
       
-    } catch (error) {
-      console.error('❌ BSV initialization failed:', error);
-      res.status(500).json({
-        message: 'BSV initialization failed',
-        error: error.message,
-        hasKeys: false
-      });
-    }
-  });
+} catch (endpointError) {
+  console.error('❌ Failed to register BSV endpoints:', endpointError);
+}
 
 // Get BSV status for current user
 app.get('/api/chat/bsv-status', authenticateToken, async (req, res) => {
