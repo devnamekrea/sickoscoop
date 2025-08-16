@@ -2167,9 +2167,15 @@ console.log('🔧 Starting BSV endpoint registration...');
         hasKeys: true
       });
       
-} catch (endpointError) {
-  console.error('❌ Failed to register BSV endpoints:', endpointError);
-}
+    } catch (error) {
+      console.error('❌ BSV initialization failed:', error);
+      res.status(500).json({
+        message: 'BSV initialization failed',
+        error: error.message,
+        hasKeys: false
+      });
+    }
+  });
 
 // Get BSV status for current user
 app.get('/api/chat/bsv-status', authenticateToken, async (req, res) => {
@@ -2345,6 +2351,10 @@ app.post('/api/chat/verify-message', authenticateToken, async (req, res) => {
 });
 
 console.log('🔗 BSV Chat API endpoints added successfully');
+
+} catch (endpointError) {
+  console.error('❌ Failed to register BSV endpoints:', endpointError);
+  }
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
