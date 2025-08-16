@@ -2090,66 +2090,74 @@ app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== BSV CHAT API ENDPOINTS =====
+// ===== BSV CHAT API ENDPOINTS WITH ERROR PROTECTION =====
 
-// Initialize BSV keys for a user
-app.post('/api/chat/init-bsv', authenticateToken, async (req, res) => {
-  try {
-    console.log('🔑 BSV initialization request from:', req.user.username);
-    
-    // Check if user already has BSV keys
-    const existingBSV = await UserBSV.findOne({ userId: req.user._id || req.user.id });
-    if (existingBSV) {
-      console.log('📋 User already has BSV keys');
-      return res.json({
-        message: 'BSV keys already initialized',
-        bsvAddress: existingBSV.bsvAddress,
-        publicKey: existingBSV.bsvPublicKey,
-        createdAt: existingBSV.createdAt,
+try {
+  console.log('🔗 Registering BSV Chat endpoints...');
+  
+  // Test BSV service first
+  if (!bsvService) {
+    throw new Error('BSV service not initialized');
+  }
+  
+  // Initialize BSV keys for a user
+  app.post('/api/chat/init-bsv', authenticateToken, async (req, res) => {
+    try {
+      console.log('🔑 BSV initialization request from:', req.user.username);
+      
+      // Check if user already has BSV keys
+      const existingBSV = await UserBSV.findOne({ userId: req.user._id || req.user.id });
+      if (existingBSV) {
+        console.log('📋 User already has BSV keys');
+        return res.json({
+          message: 'BSV keys already initialized',
+          bsvAddress: existingBSV.bsvAddress,
+          publicKey: existingBSV.bsvPublicKey,
+          createdAt: existingBSV.createdAt,
+          hasKeys: true
+        });
+      }
+      
+      // Generate new BSV keys
+      const userId = req.user._id || req.user.id;
+      const userEmail = req.user.email;
+      
+      const bsvKeys = bsvService.generateKeys(userId, userEmail);
+      
+      // Encrypt private key for storage
+      const encryptedPrivateKey = bsvService.encryptPrivateKey(bsvKeys.privateKey);
+      
+      // Save to database
+      const userBSVRecord = new UserBSV({
+        userId: userId,
+        bsvPrivateKey: encryptedPrivateKey,
+        bsvPublicKey: bsvKeys.publicKey,
+        bsvAddress: bsvKeys.address,
+        createdAt: new Date(),
+        lastUsed: new Date()
+      });
+      
+      await userBSVRecord.save();
+      
+      console.log('✅ BSV keys initialized and saved');
+      
+      res.json({
+        message: 'BSV keys initialized successfully',
+        bsvAddress: bsvKeys.address,
+        publicKey: bsvKeys.publicKey,
+        createdAt: userBSVRecord.createdAt,
         hasKeys: true
       });
+      
+    } catch (error) {
+      console.error('❌ BSV initialization failed:', error);
+      res.status(500).json({
+        message: 'BSV initialization failed',
+        error: error.message,
+        hasKeys: false
+      });
     }
-    
-    // Generate new BSV keys
-    const userId = req.user._id || req.user.id;
-    const userEmail = req.user.email;
-    
-    const bsvKeys = bsvService.generateKeys(userId, userEmail);
-    
-    // Encrypt private key for storage
-    const encryptedPrivateKey = bsvService.encryptPrivateKey(bsvKeys.privateKey);
-    
-    // Save to database
-    const userBSVRecord = new UserBSV({
-      userId: userId,
-      bsvPrivateKey: encryptedPrivateKey,
-      bsvPublicKey: bsvKeys.publicKey,
-      bsvAddress: bsvKeys.address,
-      createdAt: new Date(),
-      lastUsed: new Date()
-    });
-    
-    await userBSVRecord.save();
-    
-    console.log('✅ BSV keys initialized and saved');
-    
-    res.json({
-      message: 'BSV keys initialized successfully',
-      bsvAddress: bsvKeys.address,
-      publicKey: bsvKeys.publicKey,
-      createdAt: userBSVRecord.createdAt,
-      hasKeys: true
-    });
-    
-  } catch (error) {
-    console.error('❌ BSV initialization failed:', error);
-    res.status(500).json({
-      message: 'BSV initialization failed',
-      error: error.message,
-      hasKeys: false
-    });
-  }
-});
+  });
 
 // Get BSV status for current user
 app.get('/api/chat/bsv-status', authenticateToken, async (req, res) => {
