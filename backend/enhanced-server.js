@@ -755,7 +755,6 @@ class BSVService {
       console.error('❌ BSV key generation failed:', error);
       throw new Error('Failed to generate BSV keys: ' + error.message);
     }
-  }
 
   // Encrypt private key for secure storage
   encryptPrivateKey(privateKeyString) {
