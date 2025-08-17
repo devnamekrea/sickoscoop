@@ -744,12 +744,13 @@ class BSVService {
         address: address.toString()
       });
       
-      return {
+      try {
+    return {
         privateKey: privateKey.toString(),
         publicKey: publicKey.toString(),
         address: address.toString(),
         seedHash: seedHash.substring(0, 16)
-      };
+    };
     } catch (error) {
       console.error('❌ BSV key generation failed:', error);
       throw new Error('Failed to generate BSV keys: ' + error.message);
