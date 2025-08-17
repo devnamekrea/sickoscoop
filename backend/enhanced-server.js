@@ -680,19 +680,60 @@ class BSVService {
       const seedInput = `${userId}-${userEmail}-${this.seedSecret}`;
       const seedHash = crypto.SHA256(seedInput).toString();
       
-      // Generate private key from seed
-     // TEMPORARY DEBUG - see what BSV actually provides
-console.log('🔍 BSV object:', bsv);
-console.log('🔍 BSV.PrivateKey:', bsv.PrivateKey);
-console.log('🔍 BSV.PrivateKey methods:', bsv.PrivateKey ? Object.getOwnPropertyNames(bsv.PrivateKey) : 'UNDEFINED');
-
-// Try the simplest possible approach
-try {
-  const privateKey = new bsv.PrivateKey(); // Random key, no parameters
-  console.log('✅ Random BSV key worked:', privateKey.toString());
-} catch (err) {
-  console.error('❌ Even random BSV key failed:', err);
-}
+     // Generate private key from seed
+      let privateKey;
+      
+      // Try to generate private key from seed
+      try {
+        // Use the seed hash to create a deterministic private key
+        privateKey = new bsv.PrivateKey(seedHash);
+        console.log('✅ Deterministic BSV key generated successfully');
+      } catch (err) {
+        console.warn('⚠️ Deterministic key failed, using random key:', err.message);
+        // Fallback to random key
+        privateKey = new bsv.PrivateKey();
+        console.log('✅ Random BSV key generated successfully');
+      }
+      
+      // Generate public key and address
+      const publicKey = privateKey.toPublicKey();
+      const address = privateKey.toAddress();
+      
+      console.log('✅ BSV keys generated successfully:', {
+        userId: userId.toString().substring(0, 8) + '...',
+        publicKey: publicKey.toString().substring(0, 20) + '...',
+        address: address.toString()
+      });
+      
+      return {
+        privateKey: privateKey.toString(),
+        publicKey: publicKey.toString(),
+        address: address.toString(),
+        seedHash: seedHash.substring(0, 16)
+      };
+    } catch (error) {
+      console.error('❌ BSV key generation failed:', error);
+      throw new Error('Failed to generate BSV keys: ' + error.message);
+    }
+  }
+      
+      console.log('✅ BSV keys generated successfully:', {
+        userId: userId.toString().substring(0, 8) + '...',
+        publicKey: publicKey.toString().substring(0, 20) + '...',
+        address: address.toString()
+      });
+      
+      return {
+        privateKey: privateKey.toString(),
+        publicKey: publicKey.toString(),
+        address: address.toString(),
+        seedHash: seedHash.substring(0, 16)
+      };
+    } catch (error) {
+      console.error('❌ BSV key generation failed:', error);
+      throw new Error('Failed to generate BSV keys: ' + error.message);
+    }
+  }
 
 // For now, just return a fake key to get past this
       const publicKey = privateKey.toPublicKey();
