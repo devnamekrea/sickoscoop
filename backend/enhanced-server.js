@@ -715,7 +715,6 @@ class BSVService {
       console.error('❌ BSV key generation failed:', error);
       throw new Error('Failed to generate BSV keys: ' + error.message);
     }
-  }
       
       console.log('✅ BSV keys generated successfully:', {
         userId: userId.toString().substring(0, 8) + '...',
