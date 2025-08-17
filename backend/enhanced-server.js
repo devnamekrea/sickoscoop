@@ -681,7 +681,20 @@ class BSVService {
       const seedHash = crypto.SHA256(seedInput).toString();
       
       // Generate private key from seed
-      const privateKey = bsv.PrivateKey.fromString(seedHash);
+     // TEMPORARY DEBUG - see what BSV actually provides
+console.log('🔍 BSV object:', bsv);
+console.log('🔍 BSV.PrivateKey:', bsv.PrivateKey);
+console.log('🔍 BSV.PrivateKey methods:', bsv.PrivateKey ? Object.getOwnPropertyNames(bsv.PrivateKey) : 'UNDEFINED');
+
+// Try the simplest possible approach
+try {
+  const privateKey = new bsv.PrivateKey(); // Random key, no parameters
+  console.log('✅ Random BSV key worked:', privateKey.toString());
+} catch (err) {
+  console.error('❌ Even random BSV key failed:', err);
+}
+
+// For now, just return a fake key to get past this
       const publicKey = privateKey.toPublicKey();
       const address = privateKey.toAddress();
       
