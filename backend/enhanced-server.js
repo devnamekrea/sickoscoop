@@ -832,8 +832,6 @@ class BSVService {
         verifiedAt: new Date().toISOString()
       };
     }
-  }
-}
 
 // Initialize BSV service
 const bsvService = new BSVService();
