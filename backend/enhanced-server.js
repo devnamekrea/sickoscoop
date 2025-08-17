@@ -2577,4 +2577,18 @@ process.on('uncaughtException', (error) => {
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
   }
+  // Start the HTTP server
+const PORT = process.env.PORT || 3001;
+
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Server listening on port ${PORT}`);
+    console.log(`🌐 Health check available at /api/health`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+    console.error('❌ Server failed to start:', error.message);
+    process.exit(1);
+});
 });
