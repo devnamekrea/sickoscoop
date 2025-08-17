@@ -757,7 +757,7 @@ class BSVService {
     }
 
   // Encrypt private key for secure storage
-  encryptPrivateKey(privateKeyString) {
+  function encryptPrivateKey(privateKeyString) {
     try {
       const encrypted = crypto.AES.encrypt(privateKeyString, this.encryptionKey).toString();
       console.log('🔒 Private key encrypted for storage');
@@ -769,7 +769,7 @@ class BSVService {
   }
 
   // Decrypt private key for use
-  decryptPrivateKey(encryptedPrivateKey) {
+  function decryptPrivateKey(encryptedPrivateKey) {  
     try {
       const decrypted = crypto.AES.decrypt(encryptedPrivateKey, this.encryptionKey).toString(crypto.enc.Utf8);
       console.log('🔓 Private key decrypted for use');
@@ -781,7 +781,7 @@ class BSVService {
   }
 
   // Sign a message with BSV private key
-  signMessage(message, privateKeyString) {
+  function signMessage(message, privateKeyString) {
     try {
       console.log('✍️ Signing message with BSV key...');
       
@@ -806,7 +806,7 @@ class BSVService {
   }
 
   // Verify a message signature
-  verifyMessage(message, signature, publicKeyString) {
+  function verifyMessage(message, signature, publicKeyString) {
     try {
       console.log('🔍 Verifying message signature...');
       
