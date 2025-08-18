@@ -1226,8 +1226,9 @@ class ChatMessageService {
     }
     }
     }
-    
+
 // Initialize BSV service
+const bsvService = new BSVService();
 const privateHandleService = new PrivateHandleService(bsvService, db);
 const chatMessageService = new ChatMessageService(bsvService, privateHandleService, db);
 
