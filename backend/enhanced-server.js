@@ -924,8 +924,315 @@ class BSVService {
   }
 }
 
+// ================================
+// PRIVATE HANDLE SERVICE CLASS
+// ================================
+class PrivateHandleService {
+  constructor(bsvService, db) {
+    this.bsvService = bsvService;
+    this.db = db;
+  }
+
+  // Generate deterministic private handle from user ID and BSV keys
+  generateHandle(userId, handleIndex) {
+    const userSeed = this.bsvService.generateSeed(userId + '_handle_' + handleIndex);
+    const handleHash = require('crypto').createHash('sha256').update(userSeed).digest('hex');
+    
+    // Format: SK-####-##-## (8 chars total for privacy)
+    const part1 = handleHash.substring(0, 4).toUpperCase();
+    const part2 = handleHash.substring(4, 6).toUpperCase();
+    const part3 = handleHash.substring(6, 8).toUpperCase();
+    
+    return `SK-${part1}-${part2}-${part3}`;
+  }
+
+  // Generate handle pool for user (3 active, 7 backup)
+  async generateHandlePool(userId) {
+    const handles = [];
+    
+    for (let i = 0; i < 10; i++) {
+      const handle = this.generateHandle(userId, i);
+      const isActive = i < 3; // First 3 are active
+      
+      handles.push({
+        handle,
+        userId,
+        isActive,
+        createdAt: new Date(),
+        sharedWith: [],
+        usageCount: 0
+      });
+    }
+    
+    return handles;
+  }
+
+  // Initialize handles for user
+  async initializeHandles(userId) {
+    try {
+      // Check if user already has handles
+      const existingHandles = await this.db.collection('PrivateHandle').find({ userId }).toArray();
+      if (existingHandles.length > 0) {
+        return { success: true, message: 'Handles already exist', handles: existingHandles };
+      }
+
+      // Generate new handle pool
+      const handles = await this.generateHandlePool(userId);
+      
+      // Insert into database
+      await this.db.collection('PrivateHandle').insertMany(handles);
+      
+      // Create audit trail
+      await this.db.collection('HandleSharing').insertOne({
+        userId,
+        action: 'HANDLES_CREATED',
+        details: { handleCount: handles.length },
+        timestamp: new Date(),
+        ipAddress: null // Will be added by API endpoint
+      });
+
+      return { 
+        success: true, 
+        message: 'Handle pool created successfully',
+        handles: handles.map(h => ({ handle: h.handle, isActive: h.isActive }))
+      };
+    } catch (error) {
+      console.error('Error initializing handles:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Share handle with specific user
+  async shareHandle(ownerUserId, handleId, targetUserId, ipAddress) {
+    try {
+      // Verify handle ownership
+      const handle = await this.db.collection('PrivateHandle').findOne({ 
+        handle: handleId, 
+        userId: ownerUserId 
+      });
+      
+      if (!handle) {
+        return { success: false, error: 'Handle not found or not owned by user' };
+      }
+
+      // Check if already shared
+      if (handle.sharedWith.includes(targetUserId)) {
+        return { success: false, error: 'Handle already shared with this user' };
+      }
+
+      // Update handle with new shared user
+      await this.db.collection('PrivateHandle').updateOne(
+        { handle: handleId },
+        { 
+          $push: { sharedWith: targetUserId },
+          $inc: { usageCount: 1 }
+        }
+      );
+
+      // Create audit trail
+      await this.db.collection('HandleSharing').insertOne({
+        ownerUserId,
+        targetUserId,
+        handle: handleId,
+        action: 'HANDLE_SHARED',
+        timestamp: new Date(),
+        ipAddress
+      });
+
+      return { success: true, message: 'Handle shared successfully' };
+    } catch (error) {
+      console.error('Error sharing handle:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get user's handles and handles shared with them
+  async getUserHandles(userId) {
+    try {
+      // Get user's own handles
+      const ownHandles = await this.db.collection('PrivateHandle').find({ userId }).toArray();
+      
+      // Get handles shared with user
+      const sharedHandles = await this.db.collection('PrivateHandle').find({ 
+        sharedWith: userId 
+      }).toArray();
+
+      return {
+        success: true,
+        ownHandles: ownHandles.map(h => ({
+          handle: h.handle,
+          isActive: h.isActive,
+          sharedWithCount: h.sharedWith.length,
+          usageCount: h.usageCount
+        })),
+        sharedHandles: sharedHandles.map(h => ({
+          handle: h.handle,
+          owner: h.userId,
+          sharedAt: h.createdAt
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting user handles:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Verify handle ownership
+  async verifyHandle(handleId, expectedUserId) {
+    try {
+      const handle = await this.db.collection('PrivateHandle').findOne({ 
+        handle: handleId,
+        userId: expectedUserId
+      });
+      
+      return { 
+        success: true, 
+        isValid: !!handle,
+        handle: handle ? {
+          owner: handle.userId,
+          isActive: handle.isActive,
+          sharedWithCount: handle.sharedWith.length
+        } : null
+      };
+    } catch (error) {
+      console.error('Error verifying handle:', error);
+      return { success: false, error: error.message };
+    }
+  }
+}
+
+// ================================
+// CHAT MESSAGE SERVICE CLASS
+// ================================
+class ChatMessageService {
+  constructor(bsvService, handleService, db) {
+    this.bsvService = bsvService;
+    this.handleService = handleService;
+    this.db = db;
+  }
+
+  // Send BSV-signed message
+  async sendMessage(senderUserId, senderHandle, recipientHandle, messageContent, ipAddress) {
+    try {
+      // Verify sender owns the handle
+      const handleVerification = await this.handleService.verifyHandle(senderHandle, senderUserId);
+      if (!handleVerification.isValid) {
+        return { success: false, error: 'Invalid sender handle' };
+      }
+
+      // Find recipient by handle
+      const recipientHandleDoc = await this.db.collection('PrivateHandle').findOne({ 
+        handle: recipientHandle 
+      });
+      if (!recipientHandleDoc) {
+        return { success: false, error: 'Recipient handle not found' };
+      }
+
+      // Verify sender has permission to message this handle
+      if (!recipientHandleDoc.sharedWith.includes(senderUserId)) {
+        return { success: false, error: 'No permission to message this handle' };
+      }
+
+      // Sign message with BSV
+      const messageToSign = `${senderHandle}:${recipientHandle}:${messageContent}:${Date.now()}`;
+      const signature = await this.bsvService.signMessage(senderUserId, messageToSign);
+      if (!signature.success) {
+        return { success: false, error: 'Failed to sign message' };
+      }
+
+      // Create message object
+      const messageDoc = {
+        messageId: require('crypto').randomUUID(),
+        senderUserId,
+        recipientUserId: recipientHandleDoc.userId,
+        senderHandle,
+        recipientHandle,
+        content: messageContent,
+        signature: signature.signature,
+        publicKey: signature.publicKey,
+        timestamp: new Date(),
+        verified: true,
+        ipAddress
+      };
+
+      // Insert message
+      await this.db.collection('ChatMessage').insertOne(messageDoc);
+
+      // Update chat record
+      await this.updateChatRecord(senderUserId, recipientHandleDoc.userId, messageDoc.messageId);
+
+      return { 
+        success: true, 
+        messageId: messageDoc.messageId,
+        message: 'Message sent successfully'
+      };
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get messages for user
+  async getMessages(userId, otherUserId = null, limit = 50) {
+    try {
+      let query = {
+        $or: [
+          { senderUserId: userId },
+          { recipientUserId: userId }
+        ]
+      };
+
+      // If chatting with specific user
+      if (otherUserId) {
+        query = {
+          $and: [
+            query,
+            {
+              $or: [
+                { senderUserId: otherUserId, recipientUserId: userId },
+                { senderUserId: userId, recipientUserId: otherUserId }
+              ]
+            }
+          ]
+        };
+      }
+
+      const messages = await this.db.collection('ChatMessage')
+        .find(query)
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+
+      // Verify each message signature
+      const verifiedMessages = await Promise.all(messages.map(async (msg) => {
+        const messageToVerify = `${msg.senderHandle}:${msg.recipientHandle}:${msg.content}:${msg.timestamp.getTime()}`;
+        const verification = await this.bsvService.verifyMessage(
+          messageToVerify, 
+          msg.signature, 
+          msg.publicKey
+        );
+        
+        return {
+          ...msg,
+          signatureValid: verification.success && verification.valid,
+          surveillanceDetected: verification.success && !verification.valid
+        };
+      }));
+
+      return { success: true, messages: verifiedMessages };
+    } catch (error) {
+      console.error('Error getting messages:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update chat record
+  async updateChatRecord(user1Id, user2Id, messageId)
+
 // Initialize BSV service
-const bsvService = new BSVService();
+
+const privateHandleService = new PrivateHandleService(bsvService, db);
+const chatMessageService = new ChatMessageService(bsvService, privateHandleService, db);
 
 console.log('🚀 BSV Services initialized successfully');
 
