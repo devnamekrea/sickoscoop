@@ -1,4 +1,4 @@
-// ChatView.js - BSV Chat Component with Private Handles
+// ChatView.js - BSV Chat Component with Private Handles (SCROLLING FIXED)
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, 
@@ -50,7 +50,7 @@ const apiRequest = async (endpoint, options = {}) => {
     ...options
   };
 
-  console.log('🌍 BSV Chat API Request:', { url, method: options.method || 'GET' });
+  console.log('🌐 BSV Chat API Request:', { url, method: options.method || 'GET' });
 
   try {
     const response = await fetch(url, defaultOptions);
@@ -96,7 +96,7 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
 
   // Initialize BSV Chat on component mount
   useEffect(() => {
-    console.log('🔐 BSV Chat Component Mounted');
+    console.log('🔄 BSV Chat Component Mounted');
     checkBSVStatus();
     loadHandles();
   }, []);
@@ -127,7 +127,7 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
   const initializeBSVKeys = async () => {
     try {
       setLoading(true);
-      console.log('🔑 Initializing BSV keys...');
+      console.log('🔐 Initializing BSV keys...');
       
       const result = await apiRequest('/chat/init-bsv', {
         method: 'POST'
@@ -153,7 +153,7 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
   const loadHandles = async () => {
     try {
       setLoading(true);
-      console.log('📝 Loading handles...');
+      console.log('🔍 Loading handles...');
       
       // Try to get existing handles
       try {
@@ -165,7 +165,7 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
           return;
         }
       } catch (error) {
-        console.log('📝 No existing handles, creating new ones...');
+        console.log('🔍 No existing handles, creating new ones...');
       }
       
       // Create handles if none exist
@@ -299,7 +299,8 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-900/50 to-zinc-900/50">
+    {/* FIXED: Added max-height and proper overflow handling */}
+    <div className="h-full max-h-[90vh] flex flex-col bg-gradient-to-br from-slate-900/50 to-zinc-900/50">
       
       {/* Header with tabs */}
       <div className="flex-shrink-0 border-b border-slate-600/30 bg-slate-800/30">
@@ -388,8 +389,8 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
         </div>
       )}
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-6">
+      {/* FIXED: Tab Content with proper scrolling */}
+      <div className="flex-1 overflow-y-auto p-6 min-h-0">
         
         {/* Handles Tab */}
         {currentTab === 'handles' && (
@@ -419,43 +420,46 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-3">
-                  {handles.map((handle, index) => (
-                    <div 
-                      key={index}
-                      className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
-                        selectedHandle?.handle === handle.handle
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-slate-600/30 bg-slate-700/20 hover:border-slate-500/50'
-                      }`}
-                      onClick={() => setSelectedHandle(handle)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${handle.isActive ? 'bg-green-500' : 'bg-slate-500'}`}></div>
-                          <div>
-                            <div className="font-mono text-white font-semibold">{handle.handle}</div>
-                            <div className="text-xs text-slate-400">
-                              {handle.isActive ? 'Active' : 'Backup'} • 
-                              Shared with {handle.sharedWithCount || 0} users
+                {/* FIXED: Added max-height and scrolling for handles grid */}
+                <div className="max-h-96 overflow-y-auto pr-2">
+                  <div className="grid gap-3">
+                    {handles.map((handle, index) => (
+                      <div 
+                        key={index}
+                        className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
+                          selectedHandle?.handle === handle.handle
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-slate-600/30 bg-slate-700/20 hover:border-slate-500/50'
+                        }`}
+                        onClick={() => setSelectedHandle(handle)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${handle.isActive ? 'bg-green-500' : 'bg-slate-500'}`}></div>
+                            <div>
+                              <div className="font-mono text-white font-semibold">{handle.handle}</div>
+                              <div className="text-xs text-slate-400">
+                                {handle.isActive ? 'Active' : 'Backup'} • 
+                                Shared with {handle.sharedWithCount || 0} users
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyHandle(handle.handle);
-                            }}
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-600/50 rounded-lg transition-colors"
-                            title="Copy handle"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyHandle(handle.handle);
+                              }}
+                              className="p-2 text-slate-400 hover:text-white hover:bg-slate-600/50 rounded-lg transition-colors"
+                              title="Copy handle"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -573,46 +577,49 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
                 </button>
               </div>
               
-              {messages.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageCircle className="h-12 w-12 text-slate-500 mx-auto mb-3" />
-                  <p className="text-slate-400">No messages yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {messages.map((message, index) => (
-                    <div key={index} className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/20">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono text-sm text-blue-400">
-                            {message.senderHandle}
-                          </span>
-                          <span className="text-slate-500">→</span>
-                          <span className="font-mono text-sm text-purple-400">
-                            {message.recipientHandle}
-                          </span>
+              {/* FIXED: Added scrolling for message history */}
+              <div className="max-h-80 overflow-y-auto pr-2">
+                {messages.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="h-12 w-12 text-slate-500 mx-auto mb-3" />
+                    <p className="text-slate-400">No messages yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((message, index) => (
+                      <div key={index} className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/20">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono text-sm text-blue-400">
+                              {message.senderHandle}
+                            </span>
+                            <span className="text-slate-500">→</span>
+                            <span className="font-mono text-sm text-purple-400">
+                              {message.recipientHandle}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {message.signatureValid ? (
+                              <CheckCircle className="h-4 w-4 text-green-400" title="Signature valid" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-red-400" title="Signature invalid - possible surveillance!" />
+                            )}
+                            <span className="text-xs text-slate-500">
+                              {new Date(message.timestamp).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          {message.signatureValid ? (
-                            <CheckCircle className="h-4 w-4 text-green-400" title="Signature valid" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-red-400" title="Signature invalid - possible surveillance!" />
-                          )}
-                          <span className="text-xs text-slate-500">
-                            {new Date(message.timestamp).toLocaleString()}
-                          </span>
-                        </div>
+                        <p className="text-slate-200">{message.content}</p>
+                        {message.surveillanceDetected && (
+                          <div className="mt-2 p-2 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs">
+                            ⚠️ SURVEILLANCE DETECTED: Message signature verification failed!
+                          </div>
+                        )}
                       </div>
-                      <p className="text-slate-200">{message.content}</p>
-                      {message.surveillanceDetected && (
-                        <div className="mt-2 p-2 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs">
-                          ⚠️ SURVEILLANCE DETECTED: Message signature verification failed!
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
