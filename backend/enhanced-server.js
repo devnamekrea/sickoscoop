@@ -1687,6 +1687,319 @@ app.get('/api/features', authenticateToken, async (req, res) => {
 
 console.log('✅ Chat feature flags endpoint added');
 
+// ================================
+// BSV CHAT API ENDPOINTS
+// ================================
+
+// Initialize private handles for user
+app.post('/api/chat/init-handles', authenticateToken, async (req, res) => {
+  try {
+    // Check if BSV chat is enabled
+    if (!process.env.BSV_CHAT_ENABLED || process.env.BSV_CHAT_ENABLED !== 'true') {
+      return res.status(403).json({ error: 'BSV chat is not enabled' });
+    }
+
+    // Check if user is in beta
+    const betaUsers = (process.env.CHAT_BETA_USERS || '').split(',').map(u => u.trim());
+    if (!betaUsers.includes(req.user.email)) {
+      return res.status(403).json({ error: 'BSV chat not available for your account' });
+    }
+
+    // Check if user already has handles
+    const existingHandles = await mongoose.connection.db.collection('PrivateHandle').find({ userId: req.user.id }).toArray();
+    if (existingHandles.length > 0) {
+      return res.json({ 
+        success: true, 
+        message: 'Handles already exist', 
+        handles: existingHandles.map(h => ({ handle: h.handle, isActive: h.isActive }))
+      });
+    }
+
+    // Generate 10 handles for user
+    const handles = [];
+    for (let i = 0; i < 10; i++) {
+      // Simple handle generation
+      const seed = req.user.id + '_handle_' + i;
+      const hash = require('crypto').createHash('sha256').update(seed).digest('hex');
+      const part1 = hash.substring(0, 4).toUpperCase();
+      const part2 = hash.substring(4, 6).toUpperCase();  
+      const part3 = hash.substring(6, 8).toUpperCase();
+      const handle = `SK-${part1}-${part2}-${part3}`;
+      
+      handles.push({
+        handle,
+        userId: req.user.id,
+        isActive: i < 3, // First 3 are active
+        createdAt: new Date(),
+        sharedWith: [],
+        usageCount: 0
+      });
+    }
+
+    // Insert into database
+    await mongoose.connection.db.collection('PrivateHandle').insertMany(handles);
+    
+    // Create audit trail
+    await mongoose.connection.db.collection('HandleSharing').insertOne({
+      userId: req.user.id,
+      action: 'HANDLES_CREATED',
+      details: { handleCount: handles.length },
+      timestamp: new Date(),
+      ipAddress: req.ip
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Handle pool created successfully',
+      handles: handles.map(h => ({ handle: h.handle, isActive: h.isActive }))
+    });
+  } catch (error) {
+    console.error('Error in /api/chat/init-handles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user's handles
+app.get('/api/chat/get-handles', authenticateToken, async (req, res) => {
+  try {
+    // Get user's own handles
+    const ownHandles = await mongoose.connection.db.collection('PrivateHandle').find({ userId: req.user.id }).toArray();
+    
+    // Get handles shared with user
+    const sharedHandles = await mongoose.connection.db.collection('PrivateHandle').find({ 
+      sharedWith: req.user.id 
+    }).toArray();
+
+    res.json({
+      success: true,
+      ownHandles: ownHandles.map(h => ({
+        handle: h.handle,
+        isActive: h.isActive,
+        sharedWithCount: h.sharedWith.length,
+        usageCount: h.usageCount
+      })),
+      sharedHandles: sharedHandles.map(h => ({
+        handle: h.handle,
+        owner: h.userId,
+        sharedAt: h.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Error in /api/chat/get-handles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Share handle with specific user  
+app.post('/api/chat/share-handle', authenticateToken, async (req, res) => {
+  try {
+    const { handleId, targetUserEmail } = req.body;
+    
+    if (!handleId || !targetUserEmail) {
+      return res.status(400).json({ error: 'Handle ID and target user email required' });
+    }
+
+    // Find target user
+    const targetUser = await mongoose.connection.db.collection('User').findOne({ email: targetUserEmail });
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Target user not found' });
+    }
+
+    // Verify handle ownership
+    const handle = await mongoose.connection.db.collection('PrivateHandle').findOne({ 
+      handle: handleId, 
+      userId: req.user.id 
+    });
+    
+    if (!handle) {
+      return res.status(400).json({ error: 'Handle not found or not owned by user' });
+    }
+
+    // Check if already shared
+    if (handle.sharedWith.includes(targetUser._id.toString())) {
+      return res.status(400).json({ error: 'Handle already shared with this user' });
+    }
+
+    // Update handle with new shared user
+    await mongoose.connection.db.collection('PrivateHandle').updateOne(
+      { handle: handleId },
+      { 
+        $push: { sharedWith: targetUser._id.toString() },
+        $inc: { usageCount: 1 }
+      }
+    );
+
+    // Create audit trail
+    await mongoose.connection.db.collection('HandleSharing').insertOne({
+      ownerUserId: req.user.id,
+      targetUserId: targetUser._id.toString(),
+      handle: handleId,
+      action: 'HANDLE_SHARED',
+      timestamp: new Date(),
+      ipAddress: req.ip
+    });
+
+    res.json({ success: true, message: 'Handle shared successfully' });
+  } catch (error) {
+    console.error('Error in /api/chat/share-handle:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send BSV-signed message
+app.post('/api/chat/send-message', authenticateToken, async (req, res) => {
+  try {
+    const { senderHandle, recipientHandle, content } = req.body;
+    
+    if (!senderHandle || !recipientHandle || !content) {
+      return res.status(400).json({ error: 'Sender handle, recipient handle, and content required' });
+    }
+
+    // Verify sender owns the handle
+    const senderHandleDoc = await mongoose.connection.db.collection('PrivateHandle').findOne({ 
+      handle: senderHandle, 
+      userId: req.user.id 
+    });
+    if (!senderHandleDoc) {
+      return res.status(400).json({ error: 'Invalid sender handle' });
+    }
+
+    // Find recipient by handle
+    const recipientHandleDoc = await mongoose.connection.db.collection('PrivateHandle').findOne({ 
+      handle: recipientHandle 
+    });
+    if (!recipientHandleDoc) {
+      return res.status(400).json({ error: 'Recipient handle not found' });
+    }
+
+    // Verify sender has permission to message this handle
+    if (!recipientHandleDoc.sharedWith.includes(req.user.id)) {
+      return res.status(400).json({ error: 'No permission to message this handle' });
+    }
+
+    // Sign message with BSV
+    const messageToSign = `${senderHandle}:${recipientHandle}:${content}:${Date.now()}`;
+    const signature = await bsvService.signMessage(req.user.id, messageToSign);
+    if (!signature.success) {
+      return res.status(400).json({ error: 'Failed to sign message' });
+    }
+
+    // Create message object
+    const messageDoc = {
+      messageId: require('crypto').randomUUID(),
+      senderUserId: req.user.id,
+      recipientUserId: recipientHandleDoc.userId,
+      senderHandle,
+      recipientHandle,
+      content: content,
+      signature: signature.signature,
+      publicKey: signature.publicKey,
+      timestamp: new Date(),
+      verified: true,
+      ipAddress: req.ip
+    };
+
+    // Insert message
+    await mongoose.connection.db.collection('ChatMessage').insertOne(messageDoc);
+
+    res.json({ 
+      success: true, 
+      messageId: messageDoc.messageId,
+      message: 'Message sent successfully'
+    });
+  } catch (error) {
+    console.error('Error in /api/chat/send-message:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get chat messages
+app.get('/api/chat/get-messages', authenticateToken, async (req, res) => {
+  try {
+    const { otherUserId, limit } = req.query;
+    
+    let query = {
+      $or: [
+        { senderUserId: req.user.id },
+        { recipientUserId: req.user.id }
+      ]
+    };
+
+    // If chatting with specific user
+    if (otherUserId) {
+      query = {
+        $and: [
+          query,
+          {
+            $or: [
+              { senderUserId: otherUserId, recipientUserId: req.user.id },
+              { senderUserId: req.user.id, recipientUserId: otherUserId }
+            ]
+          }
+        ]
+      };
+    }
+
+    const messages = await mongoose.connection.db.collection('ChatMessage')
+      .find(query)
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit) || 50)
+      .toArray();
+
+    // Verify each message signature
+    const verifiedMessages = await Promise.all(messages.map(async (msg) => {
+      const messageToVerify = `${msg.senderHandle}:${msg.recipientHandle}:${msg.content}:${msg.timestamp.getTime()}`;
+      const verification = await bsvService.verifyMessage(
+        messageToVerify, 
+        msg.signature, 
+        msg.publicKey
+      );
+      
+      return {
+        ...msg,
+        signatureValid: verification.success && verification.valid,
+        surveillanceDetected: verification.success && !verification.valid
+      };
+    }));
+
+    res.json({ success: true, messages: verifiedMessages });
+  } catch (error) {
+    console.error('Error in /api/chat/get-messages:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Verify handle ownership
+app.post('/api/chat/verify-handle', authenticateToken, async (req, res) => {
+  try {
+    const { handleId, expectedUserId } = req.body;
+    
+    if (!handleId) {
+      return res.status(400).json({ error: 'Handle ID required' });
+    }
+
+    const handle = await mongoose.connection.db.collection('PrivateHandle').findOne({ 
+      handle: handleId,
+      userId: expectedUserId || req.user.id
+    });
+    
+    res.json({ 
+      success: true, 
+      isValid: !!handle,
+      handle: handle ? {
+        owner: handle.userId,
+        isActive: handle.isActive,
+        sharedWithCount: handle.sharedWith.length
+      } : null
+    });
+  } catch (error) {
+    console.error('Error in /api/chat/verify-handle:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+console.log('🔐 BSV Chat API endpoints added successfully');
+
 // File Upload Endpoint
 app.post('/api/media/upload', authenticateToken, upload.array('files', 10), async (req, res) => {
   const uploadStartTime = Date.now();
