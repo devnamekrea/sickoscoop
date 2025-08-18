@@ -657,7 +657,7 @@ class FileProcessor {
 
 const fileProcessor = new FileProcessor();
 
-// ===== BSV SERVICE CLASS =====
+// ===== CORRECTED BSV SERVICE CLASS =====
 class BSVService {
   constructor() {
     this.networkType = process.env.BSV_NETWORK || 'mainnet';
@@ -680,7 +680,6 @@ class BSVService {
       const seedInput = `${userId}-${userEmail}-${this.seedSecret}`;
       const seedHash = crypto.SHA256(seedInput).toString();
       
-     // Generate private key from seed
       let privateKey;
       
       // Try to generate private key from seed
@@ -715,40 +714,10 @@ class BSVService {
       console.error('❌ BSV key generation failed:', error);
       throw new Error('Failed to generate BSV keys: ' + error.message);
     }
-      
-      console.log('✅ BSV keys generated successfully:', {
-        userId: userId.toString().substring(0, 8) + '...',
-        publicKey: publicKey.toString().substring(0, 20) + '...',
-        address: address.toString()
-      });
-      
-      return {
-        privateKey: privateKey.toString(),
-        publicKey: publicKey.toString(),
-        address: address.toString(),
-        seedHash: seedHash.substring(0, 16)
-      };
-    } catch (error) {
-      console.error('❌ BSV key generation failed:', error);
-      throw new Error('Failed to generate BSV keys: ' + error.message);
-    }
   }
 
-// For now, just return a fake key to get past this
-      try {
-    return {
-        privateKey: "fake_private_key_for_testing",
-    publicKey: "fake_public_key_for_testing", 
-    address: "fake_address_for_testing",
-    seedHash: "fake_seed_hash_16"
-    };
-    } catch (error) {
-      console.error('❌ BSV key generation failed:', error);
-      throw new Error('Failed to generate BSV keys: ' + error.message);
-    }
-
   // Encrypt private key for secure storage
-  function encryptPrivateKey(privateKeyString) {
+  encryptPrivateKey(privateKeyString) {
     try {
       const encrypted = crypto.AES.encrypt(privateKeyString, this.encryptionKey).toString();
       console.log('🔒 Private key encrypted for storage');
@@ -760,7 +729,7 @@ class BSVService {
   }
 
   // Decrypt private key for use
-  function decryptPrivateKey(encryptedPrivateKey) {  
+  decryptPrivateKey(encryptedPrivateKey) {  
     try {
       const decrypted = crypto.AES.decrypt(encryptedPrivateKey, this.encryptionKey).toString(crypto.enc.Utf8);
       console.log('🔓 Private key decrypted for use');
@@ -772,9 +741,9 @@ class BSVService {
   }
 
   // Sign a message with BSV private key
-  function signMessage(message, privateKeyString) {
+  signMessage(message, privateKeyString) {
     try {
-      console.log('✍️ Signing message with BSV key...');
+      console.log('✏️ Signing message with BSV key...');
       
       const privateKey = bsv.PrivateKey.fromString(privateKeyString);
       const messageHash = bsv.crypto.Hash.sha256(Buffer.from(message, 'utf8'));
@@ -797,7 +766,7 @@ class BSVService {
   }
 
   // Verify a message signature
-  function verifyMessage(message, signature, publicKeyString) {
+  verifyMessage(message, signature, publicKeyString) {
     try {
       console.log('🔍 Verifying message signature...');
       
@@ -823,7 +792,8 @@ class BSVService {
         verifiedAt: new Date().toISOString()
       };
     }
-    }
+  }
+}
 
 // Initialize BSV service
 const bsvService = new BSVService();
@@ -2133,34 +2103,23 @@ app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== BSV CHAT API ENDPOINTS WITH ERROR PROTECTION =====
+// ===== BSV CHAT API ENDPOINTS =====
 
-try {
 console.log('🔧 About to register BSV Chat endpoints...');
 
-// Test if BSV service is working
-try {
-  console.log('✅ Testing BSV service...');
-  console.log('BSV service type:', typeof bsvService);
-  console.log('BSV service methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(bsvService)));
-  
-  // Test BSV library
-  console.log('BSV library loaded:', !!bsv);
-  console.log('BSV PrivateKey available:', !!bsv.PrivateKey);
-  
-} catch (testError) {
-  console.error('❌ BSV service test failed:', testError);
-}
+// Test BSV service
+console.log('✅ Testing BSV service...');
+console.log('BSV service type:', typeof bsvService);
+console.log('BSV service methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(bsvService)));
+
+// Test BSV library
+console.log('BSV library loaded:', !!bsv);
+console.log('BSV PrivateKey available:', !!bsv.PrivateKey);
 
 console.log('🔧 Starting BSV endpoint registration...');
-
-  console.log('🔗 Registering BSV Chat endpoints...');
+console.log('🔗 Registering BSV Chat endpoints...');
   
-  // Test BSV service first
-  if (!bsvService) {
-    throw new Error('BSV service not initialized');
-  }
-  
+  try {
   // Initialize BSV keys for a user
   app.post('/api/chat/init-bsv', authenticateToken, async (req, res) => {
     try {
@@ -2561,7 +2520,7 @@ async function connectToMongoDB() {
 
 // ✅ ADD: Graceful shutdown handling
 process.on('SIGTERM', () => {
-  console.log('📡 SIGTERM received, shutting down gracefully');
+  console.log('🔄 SIGTERM received, shutting down gracefully');
   server.close(() => {
     console.log('✅ HTTP server closed');
     mongoose.connection.close(false, () => {
@@ -2577,18 +2536,4 @@ process.on('uncaughtException', (error) => {
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
   }
-  // Start the HTTP server
-const PORT = process.env.PORT || 3001;
-
-const server = app.listen(PORT, () => {
-    console.log(`🚀 Server listening on port ${PORT}`);
-    console.log(`🌐 Health check available at /api/health`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Handle server errors
-server.on('error', (error) => {
-    console.error('❌ Server failed to start:', error.message);
-    process.exit(1);
-});
 });
