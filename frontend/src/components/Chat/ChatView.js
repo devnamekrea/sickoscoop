@@ -299,7 +299,6 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
   };
 
   return (
-    {/* FIXED: Added max-height and proper overflow handling */}
     <div className="h-full max-h-[90vh] flex flex-col bg-gradient-to-br from-slate-900/50 to-zinc-900/50">
       
       {/* Header with tabs */}
@@ -389,7 +388,7 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
         </div>
       )}
 
-      {/* FIXED: Tab Content with proper scrolling */}
+      {/* Tab Content with proper scrolling */}
       <div className="flex-1 overflow-y-auto p-6 min-h-0">
         
         {/* Handles Tab */}
@@ -420,7 +419,6 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
                   </button>
                 </div>
               ) : (
-                {/* FIXED: Added max-height and scrolling for handles grid */}
                 <div className="max-h-96 overflow-y-auto pr-2">
                   <div className="grid gap-3">
                     {handles.map((handle, index) => (
@@ -577,7 +575,6 @@ const ChatView = ({ user, chatFeatures, onClose }) => {
                 </button>
               </div>
               
-              {/* FIXED: Added scrolling for message history */}
               <div className="max-h-80 overflow-y-auto pr-2">
                 {messages.length === 0 ? (
                   <div className="text-center py-8">
