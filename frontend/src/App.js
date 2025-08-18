@@ -1,8 +1,8 @@
-// App.js - ENHANCED WITH BSV CHAT INTEGRATION
+// App.js - ENHANCED WITH BSV CHAT INTEGRATION - PHASE 1C COMPLETE
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, Send, Image, Video, FileText, Mic, Search, Settings, X, MoreHorizontal, Flag, Bookmark, Eye, ArrowLeft, Clock, Users, Copy, ExternalLink, Twitter, Facebook, Linkedin, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Import ChatView component - BSV Chat Integration
+// ✅ BSV CHAT: Import ChatView component
 const ChatView = React.lazy(() => import('./components/Chat/ChatView'));
 
 // Sharp SickoScoop logo with purple gradient
@@ -201,7 +201,7 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
-console.log('🌍 Environment Detection:', {
+console.log('🌐 Environment Detection:', {
   hostname: window.location.hostname,
   port: window.location.port,
   apiBase: API_BASE,
@@ -280,7 +280,7 @@ const apiRequest = async (endpoint, options = {}) => {
     delete defaultOptions.headers['Content-Type'];
   }
 
-  console.log('🌍 API Request:', {
+  console.log('🌐 API Request:', {
     url,
     method: options.method || 'GET',
     hasToken: !!token,
@@ -313,12 +313,33 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+// URL Router simulation
+const useSimpleRouter = () => {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+  
+  const navigate = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
+  
+  return { currentPath, navigate };
+};
+
+// ✅ BSV CHAT: Terms of Service Modal
 const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      {/* FIXED: Added flex flex-col structure to prevent button cutoff */}
       <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         
         {/* Header - Fixed at top */}
@@ -332,7 +353,7 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
           </button>
         </div>
         
-        {/* FIXED: Content area - scrollable, takes remaining space */}
+        {/* Content area - scrollable, takes remaining space */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="prose prose-invert prose-slate max-w-none">
             <div className="space-y-6 text-slate-300">
@@ -374,7 +395,7 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
                 </p>
                 <p className="leading-relaxed mb-4">
                   like those who own central banks and all the industries without which we could hardly live our everyday lives,
-                  Facebook's bosses, admins and mods – as well as those who build and operate their algorithms and apps – remain anonymous.
+                  Facebook's bosses, admins and mods — as well as those who build and operate their algorithms and apps — remain anonymous.
                   this is how they control and harm you. this is why you are powerless to protect the privacy and authenticity of the data 
                   coalescing about your soul in our machine-language life-world. this is what they want
                 </p>
@@ -396,11 +417,11 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
                   for this we would be grateful, if you could spread the word and/or donate to our cause. for now, we are grateful 
                   to Dr. Lucas Murrey who has agreed to donate to us a significant amount of any and all further donations he receives:
                   <a 
-  href="https://www.gofundme.com/f/StopStalkers" 
-  target="_blank" 
-  rel="noopener noreferrer"
-  className="text-blue-400 hover:text-blue-300 ml-1 underline"
->
+                    href="https://www.gofundme.com/f/StopStalkers" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 ml-1 underline"
+                  >
                     https://www.gofundme.com/f/StopStalkers
                   </a>
                 </p>
@@ -446,7 +467,7 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
           </div>
         </div>
         
-        {/* FIXED: Footer buttons - always visible, never cut off */}
+        {/* Footer buttons - always visible, never cut off */}
         <div className="flex-shrink-0 border-t border-slate-600/30 bg-slate-900/50 p-6">
           <div className="flex justify-end space-x-4">
             <button
@@ -456,7 +477,6 @@ const TermsOfServiceModal = React.memo(({ isOpen, onClose, onAccept }) => {
               Cancel
             </button>
             
-            {/* UPDATED: Accept button with orange-to-purple gradient matching terms link */}
             <button
               onClick={onAccept}
               className="px-8 py-3 relative rounded-lg transition-all duration-300 shadow-lg overflow-hidden group border-2 border-transparent font-semibold text-white min-w-[240px]"
@@ -649,8 +669,7 @@ const ShareModal = React.memo(({ post, isOpen, onClose }) => {
   );
 });
 
-// Add this SettingsModal component after your ShareModal component (around line 400-500)
-
+// ✅ BSV CHAT: Settings Modal
 const SettingsModal = React.memo(({ isOpen, onClose, user }) => {
   if (!isOpen) return null;
 
@@ -703,7 +722,7 @@ const SettingsModal = React.memo(({ isOpen, onClose, user }) => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-slate-400 text-xs">Genuine Community Building</span>
+                  <span className="text-slate-400 text-xs">BSV-Secured Messaging</span>
                 </div>
               </div>
             </div>
@@ -830,27 +849,6 @@ const EnhancedVideoPlayer = React.memo(({ file }) => {
     </div>
   );
 });
-
-// URL Router simulation
-const useSimpleRouter = () => {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
-  
-  useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-  
-  const navigate = (path) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
-  };
-  
-  return { currentPath, navigate };
-};
 
 // Landing Page Component
 const LandingPage = React.memo(({ 
@@ -1012,15 +1010,12 @@ const LandingPage = React.memo(({
                       }}
                       className="relative inline-block font-medium transition-all duration-300 group"
                     >
-                      {/* Main gradient text matching SICKOSCOOP */}
                       <span className="bg-gradient-to-r from-orange-400 via-rose-400 via-pink-400 to-purple-400 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-rose-300 group-hover:via-pink-300 group-hover:to-purple-300 transition-all duration-300 font-semibold">
                         terms of transparency, service and privacy policy
                       </span>
                       
-                      {/* Animated underline with same gradient */}
                       <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500/70 via-rose-500/70 via-pink-500/70 to-purple-500/70 transform scale-x-100 group-hover:scale-x-110 group-hover:from-orange-400 group-hover:via-rose-400 group-hover:via-pink-400 group-hover:to-purple-400 transition-transform duration-300"></div>
                       
-                      {/* Subtle glow on hover */}
                       <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 via-rose-400/10 via-pink-400/10 to-purple-400/10 rounded opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 scale-110"></div>
                     </button>
 
@@ -1049,13 +1044,10 @@ const LandingPage = React.memo(({
             </div>
           )}
           
-          {/* UPDATED TOGGLE BUTTON */}
           <button
             onClick={() => {
               setShowRegister(!showRegister);
-              // Reset terms acceptance when switching between login/register
               setTermsAccepted(false);
-              // Clear any existing errors
               setError('');
             }}
             className="mt-4 text-slate-300 hover:text-white transition-colors"
@@ -1064,7 +1056,7 @@ const LandingPage = React.memo(({
           </button>
         </div>
 
-        {/* UPDATED FEATURE CARDS WITH PDF LINKS */}
+        {/* Feature cards */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
           {[
             { 
@@ -1088,8 +1080,8 @@ const LandingPage = React.memo(({
                   <div className="absolute inset-3 bg-gradient-to-tl from-orange-300 via-purple-300 to-blue-400 transform rotate-45 animate-pulse"></div>
                 </div>
               ), 
-              title: 'Decency', 
-              desc: 'No anonymous trolls' 
+              title: 'BSV-Secured Messaging', 
+              desc: 'Cryptographic surveillance detection' 
             },
             { 
               icon: (
@@ -1132,7 +1124,7 @@ const LandingPage = React.memo(({
           ))}
         </div>
 
-{/* Support Us Button */}
+        {/* Support Us Button */}
         <div className="mt-16 flex justify-center">
           <button
             onClick={() => window.open('https://www.gofundme.com/f/StopStalkers', '_blank')}
@@ -1147,12 +1139,6 @@ const LandingPage = React.memo(({
             <p className="text-slate-300 group-hover:text-slate-200 transition-colors duration-300">
               stop stalkers
             </p>
-            
-            {/* Clickable indicator */}
-            <div className="mt-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <span className="text-xs text-blue-400 flex items-center space-x-1">
-              </span>
-            </div>
           </button>
         </div>
 
@@ -1217,28 +1203,28 @@ const Header = React.memo(({
             )}
             
             <button
-  onClick={() => {
-    navigate('/');
-    if (user) {
-      setCurrentView('feed');
-    } else {
-      setCurrentView('public');
-      fetchPublicPosts();
-    }
-  }}
-  className="flex items-center space-x-3 hover:scale-105 transition-transform"
->
-  {/* Show SS favicon + full logo on desktop */}
-  <div className="hidden sm:flex items-center space-x-3">
-    <SSFavicon size={36} />
-    <SickoScoopLogo size="small" />
-  </div>
-  
-  {/* Show just SS logo on mobile */}
-  <div className="sm:hidden">
-    <SSLogo size="small" />
-  </div>
-</button>
+              onClick={() => {
+                navigate('/');
+                if (user) {
+                  setCurrentView('feed');
+                } else {
+                  setCurrentView('public');
+                  fetchPublicPosts();
+                }
+              }}
+              className="flex items-center space-x-3 hover:scale-105 transition-transform"
+            >
+              {/* Show SS favicon + full logo on desktop */}
+              <div className="hidden sm:flex items-center space-x-3">
+                <SSFavicon size={36} />
+                <SickoScoopLogo size="small" />
+              </div>
+              
+              {/* Show just SS logo on mobile */}
+              <div className="sm:hidden">
+                <SSLogo size="small" />
+              </div>
+            </button>
             
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1342,11 +1328,11 @@ const Header = React.memo(({
             )}
 
             <button 
-  className="p-2 text-slate-300 hover:text-white transition-colors duration-200 hover:bg-slate-800/50 rounded-lg mr-3" 
-  onClick={onSettingsClick}
->
-  <Settings className="h-5 w-5" />
-</button>
+              className="p-2 text-slate-300 hover:text-white transition-colors duration-200 hover:bg-slate-800/50 rounded-lg mr-3" 
+              onClick={onSettingsClick}
+            >
+              <Settings className="h-5 w-5" />
+            </button>
             
             {user && (
               <button
@@ -1392,23 +1378,23 @@ const Header = React.memo(({
               {currentView !== 'post' && (
                 <>
                   <button
-  onClick={() => {
-    navigate('/');
-    if (user) {
-      setCurrentView('feed');
-    } else {
-      setCurrentView('public');
-      fetchPublicPosts();
-    }
-  }}
-  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm lg:text-base ${
-    currentView === 'feed' || currentView === 'public'
-      ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
-      : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
-  }`}
->
-  Feed
-</button>
+                    onClick={() => {
+                      navigate('/');
+                      if (user) {
+                        setCurrentView('feed');
+                      } else {
+                        setCurrentView('public');
+                        fetchPublicPosts();
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm lg:text-base ${
+                      currentView === 'feed' || currentView === 'public'
+                        ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
+                        : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    Feed
+                  </button>
                   
                   <button
                     onClick={() => {
@@ -1472,7 +1458,7 @@ const Header = React.memo(({
   );
 });
 
-// Post Creator Component with Enhanced File Upload
+// Post Creator Component
 const PostCreator = React.memo(({ 
   user, 
   newPost, 
@@ -1597,7 +1583,6 @@ const PostCreator = React.memo(({
         }));
       }, 1500);
 
-      // ✅ FIXED: Use the enhanced API request function
       const result = await apiRequest('/media/upload', {
         method: 'POST',
         body: formData
@@ -1882,7 +1867,7 @@ const PostCreator = React.memo(({
         accept=".pdf"
         multiple
         onChange={(e) => {
-          console.log('📁 PDF files selected:', e.target.files.length);
+          console.log('📄 PDF files selected:', e.target.files.length);
           handleFileSelect('pdf', e.target.files);
         }}
         className="hidden"
@@ -2493,7 +2478,7 @@ const Post = React.memo(({
               }}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 post-action-button ${
                 isLiked 
-                  ? 'text-red-400 bg-red-500/10 hover:bg-blue-500/20' 
+                  ? 'text-red-400 bg-red-500/10 hover:bg-red-500/20' 
                   : 'text-slate-400 hover:text-red-400 hover:bg-red-500/10'
               } ${isLiking ? 'scale-110' : ''}`}
               title={isPublicView ? "Sign up to like posts" : "Like this post"}
@@ -2707,7 +2692,7 @@ const Post = React.memo(({
   );
 });
 
-// ✅ MAIN APP COMPONENT - Enhanced with BSV Chat Integration
+// ✅ BSV CHAT: MAIN APP COMPONENT - Enhanced with BSV Chat Integration
 export default function App() {
   const { currentPath, navigate } = useSimpleRouter();
   const [user, setUser] = useState(null);
@@ -2797,7 +2782,7 @@ export default function App() {
     }
   };
 
-  // ✅ ENHANCED: Authenticated posts fetch
+  // Enhanced: Authenticated posts fetch
   const fetchPosts = async () => {
     try {
       const data = await apiRequest('/posts');
@@ -2808,7 +2793,7 @@ export default function App() {
     }
   };
 
-  // ✅ ENHANCED: Public posts fetch function
+  // Enhanced: Public posts fetch function
   const fetchPublicPosts = async () => {
     try {
       console.log('📄 Fetching public posts from:', `${API_BASE}/posts/public`);
@@ -2906,7 +2891,7 @@ export default function App() {
 
   // ✅ BSV CHAT: Handle opening chat
   const handleOpenChat = () => {
-    console.log('🔐 Opening BSV Chat Modal...');
+    console.log('🔍 Opening BSV Chat Modal...');
     setCurrentView('chat');
     setShowChatModal(true);
   };
