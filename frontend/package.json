@@ -4,7 +4,7 @@
   "description": "SickoScoop Frontend - React social media application with anti-stalking protection",
   "private": true,
   "engines": {
-    "node": "18.x",
+    "node": "20.x",
     "npm": "9.x"
   },
   "dependencies": {
