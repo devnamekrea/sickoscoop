@@ -1229,8 +1229,8 @@ class ChatMessageService {
 
 // Initialize BSV service
 const bsvService = new BSVService();
-const privateHandleService = new PrivateHandleService(bsvService, db);
-const chatMessageService = new ChatMessageService(bsvService, privateHandleService, db);
+const privateHandleService = new PrivateHandleService(bsvService, mongoose.connection.db);
+const chatMessageService = new ChatMessageService(bsvService, privateHandleService, mongoose.connection.db);
 
 console.log('🚀 BSV Services initialized successfully');
 
