@@ -1,6 +1,9 @@
-// App.js - FIXED VERSION with Dynamic Environment Detection
+// App.js - ENHANCED WITH BSV CHAT INTEGRATION
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, Send, Image, Video, FileText, Mic, Search, Settings, X, MoreHorizontal, Flag, Bookmark, Eye, ArrowLeft, Clock, Users, Copy, ExternalLink, Twitter, Facebook, Linkedin, CheckCircle, AlertCircle } from 'lucide-react';
+
+// Import ChatView component - BSV Chat Integration
+const ChatView = React.lazy(() => import('./components/Chat/ChatView'));
 
 // Sharp SickoScoop logo with purple gradient
 const SickoScoopLogo = ({ size = "default", className = "" }) => {
@@ -52,7 +55,7 @@ const SickoScoopLogo = ({ size = "default", className = "" }) => {
       </text>
     </svg>
   );
-}; // ← IMPORTANT: Semicolon here!
+}; 
 
 // Clean SS logo for compact spaces  
 const SSLogo = ({ size = "default", className = "" }) => {
@@ -101,7 +104,7 @@ const SSLogo = ({ size = "default", className = "" }) => {
       </text>
     </svg>
   );
-}; // ← IMPORTANT: Semicolon here!
+}; 
 
 // Clean SS favicon
 const SSFavicon = ({ size = 32, className = "" }) => {
@@ -170,7 +173,7 @@ const SSFavicon = ({ size = 32, className = "" }) => {
 const safeString = (value) => value ? String(value) : '';
 const safeNumber = (value) => Number(value) || 0;
 
-// ✅ FIXED: Dynamic API Base URL Detection
+// Dynamic API Base URL Detection
 const getApiBase = () => {
   const hostname = window.location.hostname;
   const port = window.location.port;
@@ -198,7 +201,7 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
-console.log('🌐 Environment Detection:', {
+console.log('🌍 Environment Detection:', {
   hostname: window.location.hostname,
   port: window.location.port,
   apiBase: API_BASE,
@@ -277,7 +280,7 @@ const apiRequest = async (endpoint, options = {}) => {
     delete defaultOptions.headers['Content-Type'];
   }
 
-  console.log('🌐 API Request:', {
+  console.log('🌍 API Request:', {
     url,
     method: options.method || 'GET',
     hasToken: !!token,
@@ -1190,7 +1193,10 @@ const Header = React.memo(({
   onBackToFeed,
   navigate,
   onSettingsClick,
-  fetchPublicPosts
+  fetchPublicPosts,
+  // ✅ BSV CHAT: Add new props
+  chatFeatures,
+  onOpenChat
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -1280,19 +1286,28 @@ const Header = React.memo(({
                   >
                     Profile
                   </button>
-                  <button
-                    onClick={() => {
-                      navigate('/chat');
-                      setCurrentView('chat');
-                    }}
-                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm lg:text-base ${
-                      currentView === 'chat' 
-                        ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
-                        : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    Chat
-                  </button>
+                  {/* ✅ BSV CHAT: Add conditional BSV Chat button */}
+                  {user && (chatFeatures?.chatEnabled || chatFeatures?.bsvChatEnabled) && (
+                    <button
+                      onClick={() => {
+                        navigate('/chat');
+                        onOpenChat();
+                      }}
+                      className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm lg:text-base relative ${
+                        currentView === 'chat' 
+                          ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
+                          : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      BSV Chat
+                      {/* ✅ BSV CHAT: Beta indicator */}
+                      {chatFeatures?.isBetaUser && (
+                        <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded-full">
+                          β
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </div>
 
                 <div className="hidden lg:block relative ml-4">
@@ -1411,21 +1426,27 @@ const Header = React.memo(({
                     <span>Profile</span>
                   </button>
                   
-                  <button
-                    onClick={() => {
-                      navigate('/chat');
-                      setCurrentView('chat');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-left flex items-center space-x-3 ${
-                      currentView === 'chat' 
-                        ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
-                        : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <span className="text-lg">💬</span>
-                    <span>Chat</span>
-                  </button>
+                  {/* ✅ BSV CHAT: Mobile menu BSV Chat button */}
+                  {user && (chatFeatures?.chatEnabled || chatFeatures?.bsvChatEnabled) && (
+                    <button
+                      onClick={() => {
+                        navigate('/chat');
+                        onOpenChat();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-left flex items-center space-x-3 ${
+                        currentView === 'chat' 
+                          ? 'bg-slate-700 text-white border-amber-500 shadow-lg shadow-amber-500/20' 
+                          : 'text-slate-300 hover:text-white border-amber-600/50 hover:border-amber-500 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <span className="text-lg">🔐</span>
+                      <span>BSV Chat</span>
+                      {chatFeatures?.isBetaUser && (
+                        <span className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded-full">β</span>
+                      )}
+                    </button>
+                  )}
                 </>
               )}
               
@@ -1493,7 +1514,7 @@ const PostCreator = React.memo(({
   };
 
   const handleFileSelect = async (type, files) => {
-    console.log('🔄 handleFileSelect called:', type, files?.length);
+    console.log('📄 handleFileSelect called:', type, files?.length);
     if (!files || files.length === 0) return;
 
     const fileArray = Array.from(files);
@@ -1754,7 +1775,7 @@ const PostCreator = React.memo(({
                             </p>
                             {file.trackingId && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                🔏 Tracked
+                                🔍 Tracked
                               </span>
                             )}
                           </div>
@@ -1803,7 +1824,7 @@ const PostCreator = React.memo(({
                 <FileText className="h-4 w-4" />
                 <span>PDF</span>
                 <span className="text-xs opacity-70">({FILE_LIMITS.pdf.label})</span>
-                <span className="text-xs text-blue-400">🔏</span>
+                <span className="text-xs text-blue-400">🔍</span>
               </button>
               
               <button 
@@ -1937,7 +1958,7 @@ const Post = React.memo(({
 
   useEffect(() => {
     if (post.mediaFiles && post.mediaFiles.length > 0) {
-      console.log('🔍 POST DEBUGGING - Post has media files:', post.mediaFiles);
+      console.log('📁 POST DEBUGGING - Post has media files:', post.mediaFiles);
       post.mediaFiles.forEach((file, index) => {
         console.log(`📄 File ${index} details:`, {
           type: file.type,
@@ -2325,7 +2346,7 @@ const Post = React.memo(({
                           <span className="text-3xl">{fileType.icon}</span>
                           {fileType.isTracked && (
                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs">🔏</span>
+                              <span className="text-white text-xs">🔍</span>
                             </div>
                           )}
                         </div>
@@ -2338,7 +2359,7 @@ const Post = React.memo(({
                             <span>📄 {fileType.displayName}</span>
                             {fileType.isTracked && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                🔏 Watermarked & Tracked
+                                🔍 Watermarked & Tracked
                               </span>
                             )}
                           </p>
@@ -2388,7 +2409,7 @@ const Post = React.memo(({
                           📥 Uploaded {new Date(post.createdAt).toLocaleDateString()} • Click "View PDF" to open in new tab
                           {fileType.isTracked && (
                             <span className="block mt-1 text-blue-400">
-                              🔏 This PDF is watermarked and tracked for security purposes
+                              🔍 This PDF is watermarked and tracked for security purposes
                             </span>
                           )}
                         </p>
@@ -2686,7 +2707,7 @@ const Post = React.memo(({
   );
 });
 
-// ✅ MAIN APP COMPONENT - Enhanced with Better State Management  
+// ✅ MAIN APP COMPONENT - Enhanced with BSV Chat Integration
 export default function App() {
   const { currentPath, navigate } = useSimpleRouter();
   const [user, setUser] = useState(null);
@@ -2701,12 +2722,15 @@ export default function App() {
   const [apiStatus, setApiStatus] = useState('checking');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-// Chat Features State
+  // ✅ BSV CHAT: Chat Features State
   const [chatFeatures, setChatFeatures] = useState({
     chatEnabled: false,
     bsvChatEnabled: false,
     isBetaUser: false
   });
+
+  // ✅ BSV CHAT: Chat Modal State
+  const [showChatModal, setShowChatModal] = useState(false);
 
   // Login/Register forms
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -2740,7 +2764,7 @@ export default function App() {
     }
   }, []);
 
-// Check chat feature flags when user logs in
+  // ✅ BSV CHAT: Check chat feature flags when user logs in
   useEffect(() => {
     const checkChatFeatures = async () => {
       if (isLoggedIn) {
@@ -2787,7 +2811,7 @@ export default function App() {
   // ✅ ENHANCED: Public posts fetch function
   const fetchPublicPosts = async () => {
     try {
-      console.log('🔄 Fetching public posts from:', `${API_BASE}/posts/public`);
+      console.log('📄 Fetching public posts from:', `${API_BASE}/posts/public`);
       const data = await apiRequest('/posts/public');
       console.log('✅ Public posts fetched successfully:', data.length, 'posts');
       setPublicPosts(Array.isArray(data) ? data : []);
@@ -2828,41 +2852,41 @@ export default function App() {
   };
 
   const handleRegister = async () => {
-  if (!registerForm.username || !registerForm.email || !registerForm.password) {
-    setError('Please fill in all fields');
-    return;
-  }
+    if (!registerForm.username || !registerForm.email || !registerForm.password) {
+      setError('Please fill in all fields');
+      return;
+    }
 
-  // Check if terms are accepted
-  if (!termsAccepted) {
-    setError('You must accept the Terms of Service to create an account');
-    return;
-  }
+    // Check if terms are accepted
+    if (!termsAccepted) {
+      setError('You must accept the Terms of Service to create an account');
+      return;
+    }
 
-  setLoading(true);
-  setError('');
+    setLoading(true);
+    setError('');
 
-  try {
-    const data = await apiRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(registerForm)
-    });
+    try {
+      const data = await apiRequest('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(registerForm)
+      });
 
-    localStorage.setItem('authToken', data.token);
-    localStorage.setItem('userData', JSON.stringify(data.user));
-    setUser(data.user);
-    setIsLoggedIn(true);
-    setCurrentView('feed');
-    setRegisterForm({ username: '', email: '', password: '' });
-    setTermsAccepted(false); // Reset terms for next time
-    await fetchPosts();
-  } catch (error) {
-    console.error('Registration error:', error);
-    setError(error.message || 'Registration failed');
-  } finally {
-    setLoading(false);
-  }
-};
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      setUser(data.user);
+      setIsLoggedIn(true);
+      setCurrentView('feed');
+      setRegisterForm({ username: '', email: '', password: '' });
+      setTermsAccepted(false); // Reset terms for next time
+      await fetchPosts();
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError(error.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -2872,12 +2896,20 @@ export default function App() {
     setCurrentView('landing');
     setPosts([]);
     setPublicPosts([]);
+    setShowChatModal(false); // ✅ BSV CHAT: Close chat modal on logout
     navigate('/');
   };
 
-const handleSettingsClick = () => {
-  setShowSettingsModal(true);
-};
+  const handleSettingsClick = () => {
+    setShowSettingsModal(true);
+  };
+
+  // ✅ BSV CHAT: Handle opening chat
+  const handleOpenChat = () => {
+    console.log('🔐 Opening BSV Chat Modal...');
+    setCurrentView('chat');
+    setShowChatModal(true);
+  };
 
   const handlePost = async (uploadedFiles = []) => {
     if (!newPost.trim() && uploadedFiles.length === 0) return;
@@ -2926,7 +2958,7 @@ const handleSettingsClick = () => {
   };
 
   const handleBrowsePublic = () => {
-    console.log('🔄 handleBrowsePublic called - switching to public view');
+    console.log('📄 handleBrowsePublic called - switching to public view');
     setCurrentView('public');
     fetchPublicPosts();
   };
@@ -2962,7 +2994,7 @@ const handleSettingsClick = () => {
     console.log('File upload triggered:', files?.length);
   };
 
-  // ✅ RENDER: Main app with enhanced error boundaries and loading states
+  // ✅ RENDER: Main app with BSV Chat integration
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900">
       {currentView === 'landing' && (
@@ -2980,9 +3012,9 @@ const handleSettingsClick = () => {
           setError={setError}
           onBrowsePublic={handleBrowsePublic}
           termsAccepted={termsAccepted}
-setTermsAccepted={setTermsAccepted}
-showTermsModal={showTermsModal}
-setShowTermsModal={setShowTermsModal}
+          setTermsAccepted={setTermsAccepted}
+          showTermsModal={showTermsModal}
+          setShowTermsModal={setShowTermsModal}
         />
       )}
 
@@ -2999,6 +3031,9 @@ setShowTermsModal={setShowTermsModal}
             navigate={navigate}
             onSettingsClick={handleSettingsClick}
             fetchPublicPosts={fetchPublicPosts} 
+            // ✅ BSV CHAT: Pass chat props to Header
+            chatFeatures={chatFeatures}
+            onOpenChat={handleOpenChat}
           />
 
           <main className="container mx-auto px-4 py-6 max-w-2xl">
@@ -3061,8 +3096,14 @@ setShowTermsModal={setShowTermsModal}
               </div>
             ) : currentView === 'chat' ? (
               <div className="text-center py-12">
-                <h2 className="text-2xl font-bold text-white mb-4">Chat</h2>
-                <p className="text-slate-400">Chat features coming soon!</p>
+                <h2 className="text-2xl font-bold text-white mb-4">BSV Chat</h2>
+                <p className="text-slate-400">BSV Chat interface will appear here when modal is closed.</p>
+                <button
+                  onClick={handleOpenChat}
+                  className="mt-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:scale-105 transition-all duration-300"
+                >
+                  Open BSV Chat
+                </button>
               </div>
             ) : (
               <>
@@ -3104,12 +3145,66 @@ setShowTermsModal={setShowTermsModal}
           </main>
         </>
       )}
+
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         user={user}
       />
+
+      {/* ✅ BSV CHAT: Chat Modal with Lazy Loading */}
+      {showChatModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-r from-slate-900/95 to-zinc-900/95 backdrop-blur-md rounded-2xl border border-slate-600/50 shadow-2xl w-full max-w-4xl h-[80vh] mx-4">
+            
+            {/* ✅ BSV CHAT: Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-600/30">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">🔐</span>
+                </div>
+                <h2 className="text-xl font-bold text-white">BSV Chat</h2>
+                {chatFeatures?.isBetaUser && (
+                  <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">BETA</span>
+                )}
+              </div>
+              <button 
+                onClick={() => {
+                  setShowChatModal(false);
+                  setCurrentView('feed');
+                }}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            {/* ✅ BSV CHAT: Modal Content */}
+            <div className="flex-1 overflow-hidden">
+              <React.Suspense 
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                      <p className="text-slate-400">Loading BSV Chat...</p>
+                    </div>
+                  </div>
+                }
+              >
+                <ChatView 
+                  user={user} 
+                  chatFeatures={chatFeatures}
+                  onClose={() => {
+                    setShowChatModal(false);
+                    setCurrentView('feed');
+                  }}
+                />
+              </React.Suspense>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
