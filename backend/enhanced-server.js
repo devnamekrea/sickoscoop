@@ -1224,13 +1224,9 @@ class ChatMessageService {
       console.error('Error getting messages:', error);
       return { success: false, error: error.message };
     }
-  }
-
-  // Update chat record
-  async updateChatRecord(user1Id, user2Id, messageId)
+    }
 
 // Initialize BSV service
-
 const privateHandleService = new PrivateHandleService(bsvService, db);
 const chatMessageService = new ChatMessageService(bsvService, privateHandleService, db);
 
