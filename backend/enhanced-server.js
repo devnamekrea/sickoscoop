@@ -2631,6 +2631,47 @@ app.get('/api/posts/public', async (req, res) => {
   }
 });
 
+// Public single post view - no auth required, increments view count
+app.get('/api/posts/public/:postId', async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId)
+      .populate('userId', 'username avatar verified transparencyScore')
+      .populate('likes.user', 'username')
+      .populate('comments.user', 'username avatar verified');
+
+    if (!post) {
+      return res.status(404).json({ 
+        message: 'Post not found',
+        error: 'POST_NOT_FOUND'
+      });
+    }
+
+    // Only allow viewing public posts
+    if (post.visibility === 'private') {
+      return res.status(403).json({ 
+        message: 'This post is private',
+        error: 'ACCESS_DENIED'
+      });
+    }
+
+    // Increment view count
+    post.viewCount += 1;
+    await post.save();
+
+    console.log('👁️ Public post viewed:', { postId, viewCount: post.viewCount });
+
+    res.json(post);
+  } catch (error) {
+    console.error('❌ Public get post error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch post',
+      error: 'FETCH_POST_ERROR'
+    });
+  }
+});
+
 app.post('/api/posts', authenticateToken, async (req, res) => {
   try {
     const { content, mediaFiles, visibility = 'public' } = req.body;
