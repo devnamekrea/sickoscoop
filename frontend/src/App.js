@@ -2464,7 +2464,7 @@ const Post = React.memo(({
             </div>
             <div className="flex items-center space-x-1">
               <Eye className="h-4 w-4" />
-              <span>{Math.floor(Math.random() * 50) + 20} views</span>
+              <span>{post.viewCount || 0} views</span>
             </div>
           </div>
         )}
