@@ -2097,7 +2097,7 @@ const Post = React.memo(({
     }
 
     if (isPublicView) {
-      onLoginPrompt?.();
+      onPostClick?.(post)
       return;
     }
 
@@ -2161,7 +2161,7 @@ const Post = React.memo(({
     <>
       <div 
         className={`bg-gradient-to-r from-slate-900/40 to-zinc-900/40 backdrop-blur-md rounded-2xl p-6 border border-slate-600/30 mb-6 transition-all duration-300 group ${
-          !isDetailView && !isPublicView ? 'hover:border-slate-500/50 cursor-pointer hover:bg-slate-800/30' : ''
+          !isDetailView ? 'hover:border-slate-500/50 cursor-pointer hover:bg-slate-800/30' : ''
         }`}
         onClick={handlePostContentClick}
       >
@@ -2522,7 +2522,7 @@ const Post = React.memo(({
             </div>
           </div>
 
-          {!isDetailView && !isPublicView && (
+          {!isDetailView && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -2955,6 +2955,11 @@ export default function App() {
   const handlePostClick = (post) => {
     setSelectedPost(post);
     setCurrentView('post');
+    // Increment view count in the background
+    const endpoint = isLoggedIn ? `/posts/${post._id}` : `/posts/public/${post._id}`;
+    apiRequest(endpoint).then(updatedPost => {
+      setSelectedPost(updatedPost);
+    }).catch(err => console.error('View count error:', err));
   };
 
   const handleBackToFeed = () => {
