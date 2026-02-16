@@ -2432,7 +2432,7 @@ const Post = React.memo(({
           </div>
         )}
 
-        {(likeCount > 0 || commentCount > 0) && (
+        {(
           <div className="flex items-center justify-between text-slate-400 text-sm mb-3 pb-3 border-b border-slate-600/30">
             <div className="flex items-center space-x-4">
               {likeCount > 0 && (
